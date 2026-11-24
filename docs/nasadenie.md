@@ -26,6 +26,7 @@ python nastroje/publikuj.py launcher dist\nc_nastroje
   skript pýta na potvrdenie. V režime Na prezeranie je publikovanie zakázané.
 
 Ostatné aplikácie sa publikujú rovnako: `python nastroje/publikuj.py <app_id> <build>`.
+To isté urobí v okne launchera Súbor → Nasadiť aplikáciu… (len plný režim; od verzie 2026.11.24-10).
 
 ## 3. Inštalácia (kolega)
 

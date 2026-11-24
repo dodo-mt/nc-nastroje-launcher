@@ -20,6 +20,7 @@ from ..pozadie import Pozadie
 from ..verzia import VERZIA
 from . import napoveda
 from .dlazdica import Dlazdica
+from .nasadenie_okno import OknoNasadenia
 from .nastavenia import OknoNastaveni
 from . import tema
 from .pole_zakazky import PoleZakazky
@@ -126,6 +127,8 @@ class HlavneOkno(TkinterDnD.Tk):
         subor = tk.Menu(m, tearoff=0)
         subor.add_command(label="Nastavenia…", command=self.otvor_nastavenia)
         subor.add_command(label="Obnoviť index zákaziek", command=lambda: self.obnov_index(sila=True))
+        subor.add_command(label="Nasadiť aplikáciu…", command=self.otvor_nasadenie)
+        self._subor_menu = subor
         subor.add_separator()
         subor.add_command(label="Ukončiť", command=self.ukonci)
         m.add_cascade(label="Súbor", menu=subor)
@@ -341,6 +344,9 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def _aktualizuj_rezim(self):
         self._rezim.configure(text="Režim: " + ("Plný" if self.nast.rezim == "plny" else "Na prezeranie"))
+        menu = getattr(self, "_subor_menu", None)
+        if menu is not None:                               # publikovanie je len v plnom režime
+            menu.entryconfigure("Nasadiť aplikáciu…", state="normal" if self.nast.rezim == "plny" else "disabled")
 
     def _aktualizuj_zdroj_text(self):
         if self._katalog_zdroj == "cache":
@@ -1021,6 +1027,14 @@ class HlavneOkno(TkinterDnD.Tk):
         ok, sprava = spustac.otvor_priecinok(app)
         if not ok:
             self.dlazdice[app.id].ukaz_chybu(sprava)
+
+    def otvor_nasadenie(self):
+        if self.nast.rezim != "plny":
+            return
+        if not self._disky_ok.get("L"):
+            self._upozorni("L:\ nie je dostupný – nasadenie sa teraz nedá spraviť.")
+            return
+        OknoNasadenia(self, Path(self.nast.koren_nastrojov), self._pozadie, self.obnov_katalog)
 
     def otvor_nastavenia(self):
         OknoNastaveni(self, self.nast, self._pri_ulozeni_nastaveni, self._filtruj(self._katalog_apps))

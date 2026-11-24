@@ -173,13 +173,14 @@ def test_neplatna_verzia_a_prazdny_build(koren, build, tmp_path):
 def test_nezhoda_pri_kontrole_nezapise_apps_json(koren, build, monkeypatch):
     pred = (koren / "apps.json").read_text(encoding="utf-8")
     volania = []
-    povodna = publikuj._spocitaj
+    from nc_nastroje import publikovanie
+    povodna = publikovanie._spocitaj
 
     def falosna(p):
         volania.append(p)
         n, v = povodna(p)
         return (n, v) if len(volania) == 1 else (n - 1, v)               # kópia „stratila“ súbor
-    monkeypatch.setattr(publikuj, "_spocitaj", falosna)
+    monkeypatch.setattr(publikovanie, "_spocitaj", falosna)
     with pytest.raises(publikuj.PublikaciaChyba, match="Kontrola zlyhala"):
         publikuj.publikuj(koren, "nl", build, "2026.11.24-1")
     assert (koren / "apps.json").read_text(encoding="utf-8") == pred     # klienti o ničom nevedia
@@ -212,3 +213,18 @@ def test_cli_bez_potvrdenia_pre_skutocny_koren_sa_pyta(koren, build, monkeypatch
     assert apps_json(koren)["aplikacie"][0]["verzia"] == "2026.11.19-1"
     kod = publikuj.main(["nl", str(build), "--verzia", "2026.11.24-1", "--koren", str(koren), "--ano"])
     assert kod == 0 and apps_json(koren)["aplikacie"][0]["verzia"] == "2026.11.24-1"
+
+
+def test_zoznam_aplikacii_obsahuje_aj_nenasadene_a_launcher(tmp_path):
+    from nc_nastroje.publikovanie import zoznam_aplikacii
+    (tmp_path / "apps.json").write_text(json.dumps({
+        "aplikacie": [{"id": "a", "nazov": "Alfa", "typ": "exe", "verzia": "", "zdroj": ""},
+                      {"id": "w", "nazov": "Web", "typ": "web", "url": "x"}, {"nazov": "bez id"}],
+        "launcher": {"verzia": ""}}), encoding="utf-8")
+    assert zoznam_aplikacii(tmp_path) == [("a", "Alfa"), ("launcher", "NC Nástroje (samotný launcher)")]
+
+
+def test_zoznam_aplikacii_bez_apps_json(tmp_path):
+    from nc_nastroje.publikovanie import zoznam_aplikacii
+    with pytest.raises(publikuj.PublikaciaChyba, match="apps.json"):
+        zoznam_aplikacii(tmp_path)

@@ -1,5 +1,10 @@
 # Čo je nové
 
+## 2026.11.24-10
+- Súbor → Nasadiť aplikáciu… (len plný režim): vyberieš aplikáciu a priečinok s buildom a launcher ho nasadí na
+  L:\_Nastroje (rovnaké kontroly a atomický zápis apps.json ako `nastroje/publikuj.py`). Pred zápisom sa pýta.
+- Jadro publikovania je v `nc_nastroje/publikovanie.py`, skript `nastroje/publikuj.py` ho len volá.
+
 ## 2026.11.24-9
 - Dialóg prvého spustenia (`--prve-spustenie`): pri novej inštalácii je predvolený režim Na prezeranie, pri opakovanej
   inštalácii ostane doterajší režim.

@@ -1,0 +1,84 @@
+{
+  "verzia_formatu": 1,
+  "aplikacie": [
+    {
+      "id": "tnc_sync",
+      "nazov": "TNC Sync",
+      "popis": "Záloha programov zo strojov",
+      "typ": "exe",
+      "verzia": "",
+      "zdroj": "",
+      "spustit": "tnc_sync.exe",
+      "ikona": "tnc_sync.png",
+      "farba": "#005FB8",
+      "prijima": ["priecinok"],
+      "argumenty": "{cesty}",
+      "stav": {"adapter": "tnc_sync"}
+    },
+    {
+      "id": "triedic_nc",
+      "nazov": "Triedič NC",
+      "popis": "Rozdelenie programov podľa stroja",
+      "typ": "exe",
+      "verzia": "",
+      "zdroj": "",
+      "spustit": "triedic_nc.exe",
+      "ikona": "triedic_nc.png",
+      "farba": "#7B3FBF",
+      "prijima": [".h", ".mpf"],
+      "argumenty": "{cesty}",
+      "len_plny_rezim": true,
+      "tlacidlo": "Otvoriť",
+      "pozastavit": true,
+      "stav": {"adapter": "proces"}
+    },
+    {
+      "id": "nastrojovy_list",
+      "nazov": "Nástrojový list",
+      "popis": "Z .pof súborov hyperMILL",
+      "typ": "exe",
+      "verzia": "",
+      "zdroj": "",
+      "spustit": "nastrojovy_list.exe",
+      "ikona": "nastrojovy_list.png",
+      "farba": "#0B7A55",
+      "prijima": [".pof", "priecinok"],
+      "argumenty": "{cesty}",
+      "stav": {"adapter": "subor_json", "cesta": "_stav\\nastrojovy_list"},
+      "log": "_stav\\nastrojovy_list",
+      "co_je_nove": "nastrojovy_list\\CO_JE_NOVE.md"
+    },
+    {
+      "id": "programovy_list",
+      "nazov": "Programový list",
+      "popis": "Nákresy upnutia → Excel + PDF",
+      "typ": "exe",
+      "verzia": "",
+      "zdroj": "",
+      "spustit": "programovy_list.exe",
+      "ikona": "programovy_list.png",
+      "farba": "#C4244B",
+      "prijima": [".png", ".jpg", ".xlsx", "priecinok"],
+      "argumenty": "{cesty}"
+    },
+    {
+      "id": "nc_editor",
+      "nazov": "NC Editor",
+      "popis": "Úprava a porovnanie programov",
+      "typ": "exe",
+      "verzia": "",
+      "zdroj": "",
+      "spustit": "nc_editor.exe",
+      "ikona": "nc_editor.png",
+      "farba": "#555555",
+      "prijima": [".h", ".i", ".mpf", ".spf", ".nc"],
+      "argumenty": "{cesty}"
+    }
+  ],
+  "launcher": {
+    "verzia": "",
+    "zdroj": "",
+    "spustit": "nc_nastroje.exe",
+    "co_je_nove": "launcher\\CO_JE_NOVE.md"
+  }
+}
