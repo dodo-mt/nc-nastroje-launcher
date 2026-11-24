@@ -1,5 +1,11 @@
 # Čo je nové
 
+## 2026.11.24-9
+- Dialóg prvého spustenia (`--prve-spustenie`): pri novej inštalácii je predvolený režim Na prezeranie, pri opakovanej
+  inštalácii ostane doterajší režim.
+- Zostavenie (`nastroje/zostav.py`) znova skúsi zmazať starý výstup, ak ho na chvíľu zamkne antivírus.
+- Nová dokumentácia: `docs/nasadenie.md` a `docs/prvy_ostry_test.md` (návod a checklist prvého ostrého nasadenia).
+
 ## 2026.11.24-8
 - Fáza 8 – režim Na prezeranie a nasadenie pre kolegov. Režim Na prezeranie skryje aplikácie len pre programátora
   (napr. Triedič NC), tie sa ani nekopírujú ani nespúšťajú pri štarte; publikovanie je v ňom zakázané. Bez hesla.
