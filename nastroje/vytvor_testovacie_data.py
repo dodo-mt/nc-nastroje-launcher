@@ -77,6 +77,26 @@ def stavove_subory():
         "version": "1.5.0"})
 
 
+def strom_zakaziek():
+    """Falošný L: a R: so zákazkami pre fázu 6 (hľadanie, Otvoriť L: / R:). Skutočné L:/R: sa nedotýka.
+    Nové zákazky: <zákazník s menom>/OD########/<pozícia>; staré: OD<zákazník>/<6 číslic> na najvyššej úrovni."""
+    l, r = KOREN / "L", KOREN / "R"
+    for cesta in (
+        ("101270-Firma Alfa spol", "OD00021930", "21930-1A", "NC"),
+        ("101270-Firma Alfa spol", "OD00021930", "21930-1B", "NC"),
+        ("101270-Firma Alfa spol", "OD00021931", "21931-1A", "NC"),
+        ("100020-Beta AG", "OD00000626", "626-1A", "NC"),
+        ("OD626", "001252", "NC"),            # stará zákazka (nie je totožná s novou OD00000626)
+        ("OD626", "001253"),
+        ("OD067", "001252"),                  # rovnaké staré číslo u iného zákazníka -> viac zhôd
+        ("OD067", "009712"),
+    ):
+        l.joinpath(*cesta).mkdir(parents=True, exist_ok=True)
+    # R: = zrkadlo L: len s programami (nie všetko)
+    r.joinpath("101270-Firma Alfa spol", "OD00021930", "21930-1A", "NC").mkdir(parents=True, exist_ok=True)
+    (r / "101270-Firma Alfa spol" / "OD00021930" / "21930-1A" / "NC" / "21930-1A_10.h").write_text("; fiktívny program\n")
+
+
 def main():
     zaznamy = []
     for a in APLIKACIE:
@@ -108,6 +128,7 @@ def main():
         encoding="utf-8")
     (KOREN / "R").mkdir(exist_ok=True)
     stavove_subory()
+    strom_zakaziek()
     print("Hotovo:", NASTROJE)
 
 

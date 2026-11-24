@@ -1,0 +1,1 @@
+; fiktívny program

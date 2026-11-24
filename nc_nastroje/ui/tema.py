@@ -19,8 +19,12 @@ def centruj(okno: tk.Misc, rodic: tk.Misc) -> None:
     """Umiestni dialóg do stredu hlavného okna."""
     okno.update_idletasks()
     w, h = okno.winfo_reqwidth(), okno.winfo_reqheight()
-    x = rodic.winfo_rootx() + (rodic.winfo_width() - w) // 2
-    y = rodic.winfo_rooty() + (rodic.winfo_height() - h) // 2
+    if rodic.winfo_viewable():
+        x = rodic.winfo_rootx() + (rodic.winfo_width() - w) // 2
+        y = rodic.winfo_rooty() + (rodic.winfo_height() - h) // 2
+    else:                                      # hlavné okno je skryté v tray – do stredu obrazovky
+        x = (okno.winfo_screenwidth() - w) // 2
+        y = (okno.winfo_screenheight() - h) // 3
     okno.geometry(f"+{max(x, 0)}+{max(y, 0)}")
 
 

@@ -18,6 +18,9 @@ dlaždicu – aplikácia sa spustí s týmito súbormi. Esc = zrušiť ťahanie.
 Zatvorenie okna (X) ho len skryje do oblasti oznámení. Ukončiť: Súbor → Ukončiť alebo pravý klik na ikonu → Ukončiť.
 Dvojklik na ikonu v oblasti oznámení otvorí okno.
 
+Zákazka: do poľa hore napíš číslo (napr. 21930, OD21930, OD00021930 alebo starú 001252, OD626/001252)
+a stlač Enter (otvorí priečinok na L:) alebo tlačidlo Otvoriť R: / Hľadať v Lupe.
+
 Klávesy:
   F1        Nápoveda
   F5        Obnoviť

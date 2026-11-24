@@ -1,8 +1,10 @@
 """Hlavné okno – zobrazenie A (dlaždice)."""
 import logging
+import os
 import queue
 import tkinter as tk
 from dataclasses import replace
+from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import messagebox, ttk
 
@@ -10,7 +12,7 @@ import sv_ttk
 from PIL import ImageTk
 from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
 
-from .. import aktualizacie, dnd, ovladanie, spustac, stavy, tray, windows_integracia
+from .. import aktualizacie, dnd, ovladanie, spustac, stavy, tray, windows_integracia, zakazky
 from ..config import LOCAL_DIR, Nastavenia, nacitaj_nastavenia, uloz_nastavenia
 from ..ikona import vytvor_ikonu
 from ..katalog import App
@@ -21,11 +23,14 @@ from .dlazdica import Dlazdica
 from .nastavenia import OknoNastaveni
 from .tema import FONT, STAVY, SVETLA, Tooltip
 from .vyber_aplikacie import VyberAplikacie
+from .zakazka_okna import NenaslaZakazku, OknoZakazky, VyberZakazky
 
 log = logging.getLogger(__name__)
 STLPCE_ZUZENE_POD = 1000          # px: pri užšom okne 2 stĺpce
 KATALOG_INTERVAL_MS = 10 * 60 * 1000   # kontrola nových verzií na L: každých 10 min
 OKRAJ_PRUHU = "#B9D3EE"
+PLACEHOLDER = "Číslo zákazky / výkresu  ·  Enter = otvoriť na L:"
+INDEX_PAUZA_PO_CHYBE = timedelta(minutes=10)   # neúspešný index sa nepokúša znova každých 30 s
 
 
 class HlavneOkno(TkinterDnD.Tk):
@@ -44,6 +49,8 @@ class HlavneOkno(TkinterDnD.Tk):
         self._cakajuce_prikazy: list[dict] = []
         self._koniec = False
         self.nast: Nastavenia = nacitaj_nastavenia()
+        self._index = zakazky.IndexZakaziek(Path(self.nast.koren_l))   # cache zákaziek (lokálny súbor)
+        self._index_pokus = datetime.min
         self.title("NC Nástroje")
         self.geometry("1160x740")
         self.minsize(900, 600)
@@ -102,6 +109,7 @@ class HlavneOkno(TkinterDnD.Tk):
         m = tk.Menu(self)
         subor = tk.Menu(m, tearoff=0)
         subor.add_command(label="Nastavenia…", command=self.otvor_nastavenia)
+        subor.add_command(label="Obnoviť index zákaziek", command=lambda: self.obnov_index(sila=True))
         subor.add_separator()
         subor.add_command(label="Ukončiť", command=self.ukonci)
         m.add_cascade(label="Súbor", menu=subor)
@@ -125,15 +133,156 @@ class HlavneOkno(TkinterDnD.Tk):
         r.columnconfigure(0, weight=1)
         self.pole = ttk.Entry(r, font=(FONT, 12))
         self.pole.grid(row=0, column=0, sticky="ew", ipady=4, padx=(0, 12))
-        Tooltip(self.pole, "Číslo zákazky / výkresu (Ctrl+F) – hľadanie príde vo fáze 6")
-        for i, (text, tip, styl) in enumerate([
-            ("Otvoriť L:", "Otvorí priečinok zákazky na L:\\", "TButton"),
-            ("Otvoriť R:", "Otvorí priečinok zákazky na R:\\", "TButton"),
-            ("Hľadať v Lupe", "Otvorí Lupu s hľadaným textom", "Accent.TButton"),
+        self._pole_tip = Tooltip(self.pole, "")
+        self._nastav_placeholder()
+        self._aktualizuj_tip_indexu()
+        self.pole.bind("<Return>", lambda e: self.rychla_akcia("L"))     # Enter = otvoriť na L:
+        for i, (text, akcia, tip, styl) in enumerate([
+            ("Otvoriť L:", "L", "Nájde priečinok zákazky a otvorí ho na L:\\ (Enter)", "TButton"),
+            ("Otvoriť R:", "R", "Otvorí rovnakú cestu na R:\\ (programy na nahratie do strojov)", "TButton"),
+            ("Hľadať v Lupe", "lupa", "Otvorí Lupu s hľadaným textom", "Accent.TButton"),
         ]):
-            b = ttk.Button(r, text=text, style=styl, state="disabled")
+            b = ttk.Button(r, text=text, style=styl, command=lambda a=akcia: self.rychla_akcia(a))
             b.grid(row=0, column=i + 1, padx=(0, 8) if i < 2 else 0, ipady=4)
-            Tooltip(b, tip + " (pripravuje sa vo fáze 6)")
+            Tooltip(b, tip)
+
+    # ---------- rýchle akcie: pole zákazky ----------
+    def _nastav_placeholder(self):
+        self._placeholder = True
+        self.pole.insert(0, PLACEHOLDER)
+        self.pole.configure(foreground=SVETLA["text2"])
+        self.pole.bind("<FocusIn>", self._pole_fokus_dnu, add="+")
+        self.pole.bind("<FocusOut>", self._pole_fokus_von, add="+")
+
+    def _pole_fokus_dnu(self, _e=None):
+        if self._placeholder:
+            self.pole.delete(0, "end")
+            self.pole.configure(foreground=SVETLA["text"])
+            self._placeholder = False
+
+    def _pole_fokus_von(self, _e=None):
+        if not self.pole.get().strip():
+            self.pole.delete(0, "end")
+            self.pole.insert(0, PLACEHOLDER)
+            self.pole.configure(foreground=SVETLA["text2"])
+            self._placeholder = True
+
+    def _pole_text(self) -> str:
+        return "" if self._placeholder else self.pole.get().strip()
+
+    def _aktualizuj_tip_indexu(self):
+        index = self._index
+        stav = (f"Index zákaziek: {index.pocet} zákaziek, obnovený {index.cas:%d.%m.%Y %H:%M}"
+                if index.cas else "Index zákaziek sa ešte nestaval (hľadá sa priamym prechodom)")
+        self._pole_tip.text = ("Číslo zákazky / výkresu – napr. 21930, OD21930, OD00021930 alebo OD626\\001252 "
+                               f"(Ctrl+F, Enter = otvoriť na L:)\n{stav}")
+
+    def rychla_akcia(self, akcia: str, text: str | None = None):
+        """akcia: L (otvoriť na L:) | R (rovnaká cesta na R:) | lupa. Hľadanie beží na pozadí, UI nečaká na sieť."""
+        text = (text if text is not None else self._pole_text()).strip()
+        if akcia == "lupa":
+            self.hladat_v_lupe(text)
+            return
+        if not text:
+            self._upozorni("Zadaj číslo zákazky alebo výkresu (napr. 21930 alebo OD00021930).")
+            self.pole.focus_set()
+            return
+        dotaz = zakazky.normalizuj(text)
+        if dotaz is None:
+            self._upozorni(f"„{text}“ nevyzerá ako číslo zákazky. Skús napr. 21930, OD21930 alebo OD626\\001252.")
+            return
+        koren_r, index = Path(self.nast.koren_r), self._index
+
+        def praca(posli):
+            try:
+                zhody = index.najdi(dotaz)
+            except OSError as e:
+                return {"chyba": f"L:\\ nie je dostupný ({e.strerror or e}).", "zhody": [], "na_r": {}}
+            na_r = {}
+            if akcia == "R":                      # kontrola R: tiež na pozadí (sieť)
+                for z in zhody:
+                    try:
+                        na_r[z.rel] = z.cesta(koren_r).is_dir()
+                    except OSError:
+                        na_r[z.rel] = False
+            return {"akcia": akcia, "text": text, "zhody": zhody, "na_r": na_r, "chyba": ""}
+
+        self._info(f"Hľadám zákazku „{text}“…")
+        self._pozadie.spusti("zakazka", praca, self._po_hladani)
+
+    def _po_hladani(self, res: dict):
+        self._skry_pruh()
+        if res["chyba"]:
+            self._upozorni(res["chyba"])
+            return
+        akcia, text, zhody = res["akcia"], res["text"], res["zhody"]
+        if not zhody:
+            NenaslaZakazku(self, text, lambda: self.hladat_v_lupe(text), self._lupa_app() is not None)
+            return
+        if akcia == "R":
+            zhody = [z for z in zhody if res["na_r"].get(z.rel)]
+            if not zhody:
+                self._upozorni(f"Zákazka „{text}“ je na L:\\, ale na R:\\ nie je "
+                               "(R: má len programy určené na nahratie do strojov).")
+                return
+        if len(zhody) == 1:
+            self._otvor_zhodu(zhody[0], akcia)
+        else:
+            VyberZakazky(self, zhody, lambda z: self._otvor_zhodu(z, akcia), "R:" if akcia == "R" else "L:")
+
+    def _otvor_zhodu(self, zhoda, akcia: str):
+        cesta = zhoda.cesta(Path(self.nast.koren_r if akcia == "R" else self.nast.koren_l))
+        try:
+            os.startfile(str(cesta))
+            log.info("Otvorená zákazka %s", cesta)
+        except OSError as e:
+            log.exception("Otvorenie %s zlyhalo", cesta)
+            self._upozorni(f"Priečinok sa nepodarilo otvoriť: {e.strerror or e}")
+
+    def _lupa_app(self) -> App | None:
+        return next((a for a in self._katalog_apps if a.id == "lupa"), None) or \
+            next((a for a in self._katalog_apps if a.typ == "web" and a.url_hladat), None)
+
+    def hladat_v_lupe(self, text: str):
+        app = self._lupa_app()
+        if app is None:
+            self._upozorni("Lupa nie je v katalóge aplikácií.")
+            return
+        ok, sprava = spustac.spusti_hladaj(app, text)
+        if not ok:
+            self._upozorni(sprava)
+
+    def obnov_index(self, sila: bool = False):
+        """Obnoví index zákaziek na pozadí (raz denne, alebo hneď z menu). L: sa len číta."""
+        teraz = datetime.now()
+        if not sila:
+            if not self._index.je_zastaraly() or (teraz - self._index_pokus < INDEX_PAUZA_PO_CHYBE):
+                return
+        if not self._disky_ok["L"]:
+            if sila:
+                self._upozorni("L:\\ nie je dostupný – index zákaziek sa teraz neobnoví.")
+            return
+        self._index_pokus = teraz
+        index = self._index
+
+        def praca(posli):
+            try:
+                return {"pocet": index.zostav(), "chyba": ""}
+            except OSError as e:
+                return {"pocet": index.pocet, "chyba": f"{e.strerror or e}"}
+
+        if sila:
+            self._info("Obnovujem index zákaziek…")
+        self._pozadie.spusti("index", praca, lambda r: self._po_indexe(r, sila))
+
+    def _po_indexe(self, res: dict, sila: bool):
+        self._aktualizuj_tip_indexu()
+        if not sila:
+            return
+        if res["chyba"]:
+            self._upozorni(f"Index zákaziek sa nepodarilo obnoviť: {res['chyba']}")
+        else:
+            self._upozorni(f"Index zákaziek obnovený: {res['pocet']} zákaziek.")
 
     def _postav_pruh_aktualizacie(self):
         """Modrý pruh „Na L:\\_Nastroje je nová verzia: … Aktualizuje sa pri ďalšom spustení.“"""
@@ -388,6 +537,7 @@ class HlavneOkno(TkinterDnD.Tk):
                 d.nastav_stav(self._stav_pre(id_))
         self._disky_ok = {"L": v.l_ok, "R": v.r_ok}
         self._publikuj_tray()
+        self.obnov_index()                          # raz denne (a len ak je L: dostupný)
         for pismeno, ok in (("L", v.l_ok), ("R", v.r_ok)):
             bodka, text = self._disky[pismeno]
             bodka.configure(fg=STAVY["ok" if ok else "chyba"][0])
@@ -511,6 +661,12 @@ class HlavneOkno(TkinterDnD.Tk):
             self._pruh_id = None
         self._pruh_dnd.pack_forget()
 
+    def _info(self, text: str):
+        """Neutrálna informácia v hornom pruhu (napr. „Hľadám…“); zmizne po výsledku alebo po 15 s."""
+        self._skry_pruh()
+        self._ukaz_pruh(text, esc=False)
+        self._pruh_id = self.after(15000, self._skry_pruh)
+
     def _upozorni(self, text: str):
         """Krátke upozornenie v hornom pruhu (zmizne samo)."""
         self._skry_pruh()
@@ -588,10 +744,13 @@ class HlavneOkno(TkinterDnD.Tk):
         super().destroy()
 
     def otvor_zakazku(self):
-        """Tray → Otvoriť zákazku…: okno s poľom zákazky (samotné hľadanie príde vo fáze 6)."""
-        self.zobraz_okno()
-        self.pole.focus_set()
-        self.pole.selection_range(0, "end")
+        """Tray → Otvoriť zákazku…: malé okno s poľom (funguje aj keď je hlavné okno skryté)."""
+        okno = getattr(self, "_okno_zakazky", None)
+        if okno is not None and okno.winfo_exists():
+            okno.lift()
+            okno.focus_force()
+            return
+        self._okno_zakazky = OknoZakazky(self, self.rychla_akcia)
 
     def _oznam(self, text: str):
         """Správa používateľovi: v pruhu, ak je okno vidieť, inak oznámením z tray."""
@@ -759,6 +918,9 @@ class HlavneOkno(TkinterDnD.Tk):
         zmena_korena = nast.koren_nastrojov != self.nast.koren_nastrojov
         stara, self.nast = self.nast, nast
         uloz_nastavenia(nast)
+        if nast.koren_l != stara.koren_l:           # index patrí ku konkrétnemu koreňu L:
+            self._index = zakazky.IndexZakaziek(Path(nast.koren_l))
+            self._aktualizuj_tip_indexu()
         self._aktualizuj_rezim()
         self._aplikuj_windows(stara, nast)
         if zmena_korena:                          # stavy a aktualizácie z iného koreňa neplatia

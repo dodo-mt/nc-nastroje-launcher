@@ -91,6 +91,21 @@ def spusti(app: App, cesty: list[str] | None = None) -> tuple[bool, str]:
         return False, f"Nepodarilo sa spustiť – {e}"
 
 
+def spusti_hladaj(app: App, text: str) -> tuple[bool, str]:
+    """Otvorí webovú aplikáciu (Lupu) s hľadaným textom cez `url_hladat` (URL-enkódovaný). Bez `url_hladat` ju
+    otvorí len tak. Vráti (ok, správa). Nikdy nevyhodí výnimku."""
+    try:
+        if app.typ != "web" or not app.url:
+            return False, "Aplikácia nevie hľadať (nie je webová)"
+        url = app.url_hladat.format(url=app.url, text=quote(text)) if app.url_hladat else app.url
+        webbrowser.open(url)
+        log.info("Hľadanie v %s: %s", app.id, url)
+        return True, ""
+    except Exception as e:  # noqa: BLE001 – UI nesmie spadnúť
+        log.exception("Hľadanie v %s zlyhalo", app.id)
+        return False, f"Nepodarilo sa otvoriť – {e}"
+
+
 def otvor_priecinok(app: App) -> tuple[bool, str]:
     p = priecinok_aplikacie(app)
     if not p or not p.exists():

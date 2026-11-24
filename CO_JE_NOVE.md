@@ -1,5 +1,13 @@
 # Čo je nové
 
+## 2026.11.24-6
+- Fáza 6 – rýchle akcie: pole „Číslo zákazky / výkresu“ nájde priečinok zákazky na L: (Enter alebo Otvoriť L:),
+  Otvoriť R: otvorí rovnakú cestu na R:, Hľadať v Lupe otvorí Lupu s hľadaným textom.
+- Rozumie `21930`, `OD21930`, `OD00021930` aj `21930-1A`; staré zákazky ako `001252`, `ON001252` alebo `OD626\001252`.
+- Viac zhôd = okno s výberom, žiadna zhoda = ponuka Hľadať v Lupe. Tray → Otvoriť zákazku… otvorí malé okno s poľom.
+- Index zákaziek (2 úrovne L:) sa stavia na pozadí raz denne alebo cez Súbor → Obnoviť index zákaziek.
+  Zákazka, ktorá v indexe ešte nie je, sa nájde priamym prechodom a doplní sa.
+
 ## 2026.11.24-5
 - Fáza 5 – tray a Windows: ikona v oblasti oznámení so stavovou bodkou (najhorší stav), menu s aplikáciami
   (klik = spustiť), Pozastaviť triedič, Otvoriť zákazku…, Otvoriť NC Nástroje (aj dvojklik), Ukončiť.
