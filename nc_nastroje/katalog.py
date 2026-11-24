@@ -91,6 +91,16 @@ def nacitaj_katalog_z_textu(text: str) -> tuple[list[App], list[str]]:
     return apps, chyby
 
 
+REZIMY = ("plny", "prezeranie")
+
+
+def filtruj_rezim(apps: list[App], rezim: str) -> list[App]:
+    """Režim „Na prezeranie“ skryje aplikácie s `len_plny_rezim` (napr. Triedič NC); Plný ukáže všetko."""
+    if rezim == "prezeranie":
+        return [a for a in apps if not a.len_plny_rezim]
+    return list(apps)
+
+
 def nacitaj_katalog(cesta: Path) -> tuple[list[App], list[str]]:
     """Vráti (aplikácie, chyby). Nikdy nevyhodí výnimku kvôli obsahu súboru."""
     try:

@@ -1,5 +1,15 @@
 # Čo je nové
 
+## 2026.11.24-8
+- Fáza 8 – režim Na prezeranie a nasadenie pre kolegov. Režim Na prezeranie skryje aplikácie len pre programátora
+  (napr. Triedič NC), tie sa ani nekopírujú ani nespúšťajú pri štarte; publikovanie je v ňom zakázané. Bez hesla.
+- Inštalácia: `nastroje/zostav.py` zostaví launcher (PyInstaller), `publikuj.py launcher` ho nasadí na L:\\_Nastroje
+  a vytvorí `Instalovat NC Nastroje.bat`. Kolega len dvojklikne – pri prvom spustení si zvolí režim, spustenie po
+  prihlásení a zástupcu na ploche.
+- `nc_nastroje.exe --odinstaluj` odstráni zástupcov vytvorených NC Nástrojmi (cudzích nikdy).
+- Oprava: v zostavenom exe sa aplikácie typu python spúšťajú nainštalovaným Pythonom (nie launcherom samotným).
+- Verzia launchera v apps.json sa berie z `verzia.txt` v builde, aby sa aktualizácia nikdy neopakovala v kruhu.
+
 ## 2026.11.24-7
 - Fáza 7 – zobrazenie B (Zobraziť → Zoznam + detail): zoznam aplikácií vľavo, vpravo detail vybranej aplikácie
   s tromi kartami (z riadkov stavu), posledné záznamy (ak ich aplikácia vráti) a tlačidlá Priečinok, Log,

@@ -13,9 +13,9 @@ from PIL import ImageTk
 from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
 
 from .. import aktualizacie, dnd, ovladanie, spustac, stavy, tray, windows_integracia, zakazky
-from ..config import LOCAL_DIR, Nastavenia, nacitaj_nastavenia, uloz_nastavenia
+from ..config import LOCAL_DIR, NASTAVENIA_SUBOR, Nastavenia, nacitaj_nastavenia, uloz_nastavenia
 from ..ikona import vytvor_ikonu
-from ..katalog import App
+from ..katalog import App, filtruj_rezim
 from ..pozadie import Pozadie
 from ..verzia import VERZIA
 from . import napoveda
@@ -23,6 +23,7 @@ from .dlazdica import Dlazdica
 from .nastavenia import OknoNastaveni
 from . import tema
 from .pole_zakazky import PoleZakazky
+from .prve_spustenie import PrveSpustenie, Volby, volby_na_nastavenia
 from .tema import FONT, PALETA, STAVY, Tooltip, nastav_temu, prefarbi_strom, prepni_ttk_temu
 from .vyber_aplikacie import VyberAplikacie
 from .zakazka_okna import NenaslaZakazku, OknoZakazky, VyberZakazky
@@ -50,6 +51,10 @@ class HlavneOkno(TkinterDnD.Tk):
         self._katalog_hotovy = False              # prvý beh na pozadí (kopírovanie verzií) dobehol
         self._cakajuce_prikazy: list[dict] = []
         self._koniec = False
+        # prvé spustenie zostaveného exe (nastavenia ešte neexistujú) alebo `--prve-spustenie` z inštalátora
+        self._mal_nastavenia = NASTAVENIA_SUBOR.exists()
+        self._prve_spustenie = bool(self._prikaz.get("prve_spustenie")) or \
+            (windows_integracia.je_zostaveny() and not self._mal_nastavenia)
         self.nast: Nastavenia = nacitaj_nastavenia()
         self._zobrazenie = self.nast.zobrazenie if self.nast.zobrazenie in ("A", "B") else "A"
         self._b: ZoznamDetail | None = None          # zobrazenie B (vytvorí sa pri prvom prepnutí)
@@ -112,6 +117,8 @@ class HlavneOkno(TkinterDnD.Tk):
         self.after(self.nast.interval_stavov_s * 1000, self._casovac_stavov)
         self.after(KATALOG_INTERVAL_MS, self._casovac_katalogu)
         self._spracuj_prikaz(self._prikaz, prvy=True)
+        if self._prve_spustenie and self._prikaz.get("akcia") in ("zobraz", "cesty"):
+            self.after(600, self._ukaz_prve_spustenie)
 
     # ---------- stavba UI ----------
     def _postav_menu(self):
@@ -426,9 +433,7 @@ class HlavneOkno(TkinterDnD.Tk):
         napoveda.ukaz_napovedu(self)
 
     def _filtruj(self, apps: list[App]) -> list[App]:
-        if self.nast.rezim == "prezeranie":
-            return [a for a in apps if not a.len_plny_rezim]
-        return list(apps)
+        return filtruj_rezim(apps, self.nast.rezim)
 
     def _pouzi_katalog(self, kat: aktualizacie.Katalog, sila: bool = False):
         self._katalog_zdroj = kat.zdroj
@@ -473,7 +478,7 @@ class HlavneOkno(TkinterDnD.Tk):
             posli(("katalog", kat))                           # dlaždice hneď, kopírovanie potom
             akt, launcher = {}, None
             if kat.zdroj == "siet":
-                apps = [a for a in kat.apps if not (rezim == "prezeranie" and a.len_plny_rezim)]
+                apps = filtruj_rezim(kat.apps, rezim)
                 akt = aktualizacie.aktualizuj_aplikacie(
                     apps, koren, lambda a: stavy.bezi_aplikacia(a, kontext), caka,
                     pri_priebehu=lambda id_, s: posli(("app", id_, s)))
@@ -900,6 +905,31 @@ class HlavneOkno(TkinterDnD.Tk):
             cesty = list(p.get("cesty") or [])
             if cesty:
                 VyberAplikacie(self, self.apps, cesty, lambda app, c: self.spusti(app, c))
+
+    # ---------- prvé spustenie (nasadenie pre kolegov) ----------
+    def _ukaz_prve_spustenie(self):
+        """Dialóg pri prvom spustení: režim, spustenie po prihlásení, zástupca na ploche."""
+        if self.winfo_exists():
+            # nová inštalácia: predvolene „Na prezeranie“ (kolegovia); pri opakovanej inštalácii ostane doterajší režim
+            predvoleny = self.nast.rezim if self._mal_nastavenia else "prezeranie"
+            PrveSpustenie(self, self._po_prvom_spusteni, Volby(predvoleny))
+
+    def _po_prvom_spusteni(self, v: Volby):
+        stara = self.nast
+        self.nast = volby_na_nastavenia(stara, v)
+        self.nast.tray_oznamenie_ukazane = stara.tray_oznamenie_ukazane
+        self._uloz_nastavenia_ticho()                 # nastavenia existujú, dialóg sa už nezopakuje
+        self._prve_spustenie = False
+        self._aktualizuj_rezim()
+        self._aplikuj_windows(stara, self.nast)
+        chyby = []
+        if v.na_plochu:
+            ok, sprava = windows_integracia.vytvor_launcher_na_ploche()
+            if not ok:
+                chyby.append(sprava)
+        if chyby:
+            self._upozorni(" · ".join(chyby))
+        self.nacitaj(sila=True)                       # režim mohol zmeniť zoznam aplikácií
 
     # ---------- Windows integrácia ----------
     def _aplikuj_windows(self, stara: Nastavenia, nova: Nastavenia):

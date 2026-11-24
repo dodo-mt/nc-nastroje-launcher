@@ -1,6 +1,7 @@
 """Spúšťanie aplikácií."""
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -44,14 +45,25 @@ def _cesty_do_suboru(cesty: list[str]) -> str:
     return "@" + str(subor)
 
 
+def najdi_pythonw() -> str | None:
+    """Python na spúšťanie aplikácií typu `python`. Zo zdrojového kódu je to ten, ktorý spustil launcher; v zostavenom
+    exe je `sys.executable` samotný launcher (nie Python), preto sa hľadá nainštalovaný `pythonw`."""
+    if not getattr(sys, "frozen", False):
+        pythonw = Path(sys.executable).with_name("pythonw.exe")
+        return str(pythonw if pythonw.exists() else sys.executable)
+    return shutil.which("pythonw") or shutil.which("python")
+
+
 def zostav_prikaz(app: App, cesty: list[str] | None = None) -> list[str]:
     priecinok = priecinok_aplikacie(app)
     if priecinok is None:
         raise FileNotFoundError(NIE_JE_LOKALNE)
     cesta_programu = str(priecinok / app.spustit)
     if app.typ == "python":
-        pythonw = Path(sys.executable).with_name("pythonw.exe")
-        zaklad = [str(pythonw if pythonw.exists() else sys.executable), cesta_programu]
+        pythonw = najdi_pythonw()
+        if not pythonw:
+            raise FileNotFoundError("Aplikácia je skript v Pythone a Python nie je na tomto počítači nainštalovaný")
+        zaklad = [pythonw, cesta_programu]
     else:
         zaklad = [cesta_programu]
     arg = []

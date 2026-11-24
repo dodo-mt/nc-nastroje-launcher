@@ -75,11 +75,67 @@ def test_dalsia_verzia():
     assert d(["2026.11.19-1", "nezmysel", ""], DNES) == "2026.11.24-1"
 
 
-def test_publikuje_launcher(koren, build):
-    v = publikuj.publikuj(koren, "launcher", build, "2026.11.24-3")
+@pytest.fixture
+def build_launchera(build):
+    (build / "nc_nastroje.exe").write_text("launcher")
+    return build
+
+
+def test_publikuje_launcher(koren, build_launchera):
+    v = publikuj.publikuj(koren, "launcher", build_launchera, "2026.11.24-3")
     assert apps_json(koren)["launcher"] == {"verzia": "2026.11.24-3", "zdroj": "launcher\\2026.11.24-3",
                                             "spustit": "nc_nastroje.exe"}
-    assert (v["cielovy"] / "nl.exe").exists()
+    assert (v["cielovy"] / "nc_nastroje.exe").exists()
+
+
+def test_launcher_berie_verziu_z_verzia_txt(koren, build_launchera):
+    """Verzia v apps.json musí sedieť s verziou v exe, inak by sa aktualizácia launchera opakovala."""
+    (build_launchera / "verzia.txt").write_text("2026.11.24-8\n", encoding="utf-8")
+    v = publikuj.publikuj(koren, "launcher", build_launchera)               # bez --verzia
+    assert v["verzia"] == "2026.11.24-8" and apps_json(koren)["launcher"]["verzia"] == "2026.11.24-8"
+
+
+def test_launcher_nezhoda_verzie_s_verzia_txt_sa_odmietne(koren, build_launchera):
+    (build_launchera / "verzia.txt").write_text("2026.11.24-8\n", encoding="utf-8")
+    pred = (koren / "apps.json").read_text(encoding="utf-8")
+    with pytest.raises(publikuj.PublikaciaChyba, match="nesedí s verzia.txt"):
+        publikuj.publikuj(koren, "launcher", build_launchera, "2026.11.25-1")
+    assert (koren / "apps.json").read_text(encoding="utf-8") == pred
+    publikuj.publikuj(koren, "launcher", build_launchera, "2026.11.24-8")      # rovnaká verzia je v poriadku
+
+
+def test_launcher_bez_verzia_txt_vyzaduje_verziu(koren, build_launchera):
+    with pytest.raises(publikuj.PublikaciaChyba, match="verzia.txt"):
+        publikuj.publikuj(koren, "launcher", build_launchera)
+
+
+def test_launcher_bez_exe_sa_odmietne(koren, build):
+    with pytest.raises(publikuj.PublikaciaChyba, match="nc_nastroje.exe"):
+        publikuj.publikuj(koren, "launcher", build, "2026.11.24-3")
+
+
+def test_instalator_pre_kolegov_sa_zapise_len_pri_launcheri(koren, build_launchera):
+    publikuj.publikuj(koren, "nl", build_launchera, "2026.11.24-1")
+    assert not (koren / publikuj.INSTALATOR).exists()
+    v = publikuj.publikuj(koren, "launcher", build_launchera, "2026.11.24-3")
+    assert v["instalator"] == koren / publikuj.INSTALATOR
+    text = (koren / publikuj.INSTALATOR).read_text(encoding="utf-8")
+    assert 'set "VERZIA=2026.11.24-3"' in text
+    # nová verzia prepíše zapečenú verziu v inštalátore
+    (build_launchera / "nc_nastroje.exe").write_text("novy")
+    publikuj.publikuj(koren, "launcher", build_launchera, "2026.11.24-4")
+    assert 'set "VERZIA=2026.11.24-4"' in (koren / publikuj.INSTALATOR).read_text(encoding="utf-8")
+
+
+def test_text_instalatora():
+    riadky = publikuj.text_instalatora("2026.11.24-8").split("\r\n")
+    assert 'set "VERZIA=2026.11.24-8"' in riadky
+    assert any(r.startswith("robocopy") and "/E" in r for r in riadky)             # kópia z L: do %LOCALAPPDATA%
+    assert any("aktualna.txt" in r and r.startswith(">") for r in riadky)          # štartér potom pozná verziu
+    assert any(r.startswith("start") and "--prve-spustenie" in r for r in riadky)
+    assert any(r == "if errorlevel 8 goto chyba" for r in riadky)                  # robocopy: 8+ = chyba
+    assert riadky.index("if errorlevel 8 goto chyba") < next(i for i, r in enumerate(riadky) if "aktualna.txt" in r)
+    assert "%LOCALAPPDATA%\\NC_Nastroje\\launcher" in "\n".join(riadky)
 
 
 @pytest.mark.parametrize("app_id,sprava", [("neznama", "nie je v apps.json"), ("lupa", "webová")])

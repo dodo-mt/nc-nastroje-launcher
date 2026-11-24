@@ -26,8 +26,49 @@ sys.path.insert(0, str(PROJEKT))
 from nc_nastroje.aktualizacie import _spocitaj, je_novsia, parsuj_verziu  # noqa: E402
 
 
+INSTALATOR = "Instalovat NC Nastroje.bat"     # pre kolegov: dvojklik na L:\\_Nastroje\\Instalovat NC Nastroje.bat
+
+
 class PublikaciaChyba(Exception):
     """Zrozumiteľná chyba pre používateľa (nič sa nezapísalo do apps.json)."""
+
+
+def verzia_z_buildu(build: Path) -> str | None:
+    """Verzia zapísaná do `verzia.txt` pri zostavení (nastroje/zostav.py); None, ak súbor nie je."""
+    try:
+        v = (Path(build) / "verzia.txt").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return v or None
+
+
+def text_instalatora(verzia: str, spustit: str = "nc_nastroje.exe") -> str:
+    """Text `Instalovat NC Nastroje.bat`: skopíruje launcher z L: do %LOCALAPPDATA%\\NC_Nastroje\\launcher\\<verzia>,
+    zapíše `aktualna.txt` a spustí launcher s dialógom prvého spustenia. Verzia je zapečená pri publikovaní."""
+    return "\r\n".join([
+        "@echo off",
+        "chcp 65001 >nul",
+        f'set "VERZIA={verzia}"',
+        'set "ZDROJ=%~dp0launcher\\%VERZIA%"',
+        'set "ZAKLAD=%LOCALAPPDATA%\\NC_Nastroje\\launcher"',
+        'set "CIEL=%ZAKLAD%\\%VERZIA%"',
+        f'if exist "%ZDROJ%\\{spustit}" goto kopiruj',
+        "echo Instalacia sa nenasla: %ZDROJ%",
+        "pause",
+        "exit /b 1",
+        ":kopiruj",
+        "echo Instalujem NC Nastroje %VERZIA% ...",
+        'robocopy "%ZDROJ%" "%CIEL%" /E /NFL /NDL /NJH /NJS /NP >nul',
+        "if errorlevel 8 goto chyba",
+        '> "%ZAKLAD%\\aktualna.txt" echo %VERZIA%',
+        f'start "" "%CIEL%\\{spustit}" --prve-spustenie',
+        "exit /b 0",
+        ":chyba",
+        "echo Kopirovanie zlyhalo.",
+        "pause",
+        "exit /b 1",
+        "",
+    ])
 
 
 def dalsia_verzia(existujuce: list[str], dnes: date | None = None) -> str:
@@ -74,6 +115,21 @@ def publikuj(koren: Path, app_id: str, build: Path, verzia: str | None = None, d
     if not build.is_dir() or not any(build.rglob("*")):
         raise PublikaciaChyba(f"Build '{build}' neexistuje alebo je prázdny")
 
+    spustit = str(zaznam.get("spustit") or "nc_nastroje.exe")
+    if app_id == "launcher":
+        # verzia v apps.json MUSÍ sedieť s verziou v exe, inak by launcher po aktualizácii hlásil starú verziu a
+        # ponúkal aktualizáciu donekonečna – preto sa berie z verzia.txt, ktorý zapísal nastroje/zostav.py
+        z_buildu = verzia_z_buildu(build)
+        if z_buildu:
+            if verzia and verzia != z_buildu:
+                raise PublikaciaChyba(f"Verzia {verzia} nesedí s verzia.txt v builde ({z_buildu}) – exe by hlásil inú "
+                                      "verziu a aktualizácia launchera by sa opakovala")
+            verzia = z_buildu
+        elif verzia is None:
+            raise PublikaciaChyba("Build launchera nemá verzia.txt – zostav ho cez nastroje/zostav.py (alebo zadaj --verzia)")
+        if not (build / spustit).is_file():
+            raise PublikaciaChyba(f"Build launchera neobsahuje {spustit}")
+
     app_dir = koren / app_id
     existujuce = [p.name for p in app_dir.iterdir() if p.is_dir()] if app_dir.is_dir() else []
     aktualna = str(zaznam.get("verzia") or "")
@@ -112,7 +168,12 @@ def publikuj(koren: Path, app_id: str, build: Path, verzia: str | None = None, d
     novy = apps_json.with_name("apps.json.tmp")
     novy.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(novy, apps_json)
-    return {"app_id": app_id, "verzia": verzia, "cielovy": ciel, "subory": ciel_pocty[0], "bajty": ciel_pocty[1]}
+    vysledok = {"app_id": app_id, "verzia": verzia, "cielovy": ciel, "subory": ciel_pocty[0], "bajty": ciel_pocty[1]}
+    if app_id == "launcher":                       # inštalátor pre kolegov so zapečenou novou verziou
+        instalator = koren / INSTALATOR
+        instalator.write_text(text_instalatora(verzia, spustit), encoding="utf-8", newline="")
+        vysledok["instalator"] = instalator
+    return vysledok
 
 
 def _je_testovaci_koren(koren: Path) -> bool:
@@ -150,6 +211,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(f"Hotovo: {v['app_id']} {v['verzia']} -> {v['cielovy']} ({v['subory']} súborov, {v['bajty']} B)")
     print("apps.json aktualizovaný (záloha apps.json.bak).")
+    if "instalator" in v:
+        print(f"Inštalátor pre kolegov: {v['instalator']}")
     return 0
 
 

@@ -223,6 +223,45 @@ def synchronizuj_odoslat_do(apps: list[App], povolene: list[str], dir_sendto: Pa
     return chyby
 
 
+NAZOV_PLOCHA = "NC Nástroje.lnk"
+
+
+def vytvor_launcher_na_ploche(dir_desktop: Path | None = None) -> tuple[bool, str]:
+    """Zástupca samotného launchera (otvorí okno) na ploche. Cudzí súbor s rovnakým názvom nepremaže."""
+    try:
+        lnk = (Path(dir_desktop) if dir_desktop else priecinok("desktop")) / NAZOV_PLOCHA
+        if lnk.exists() and not je_nas_zastupca(lnk):
+            return False, f"Na ploche už je '{NAZOV_PLOCHA}' – nepremazávam ho"
+        p = prikaz_launchera()
+        zastupca_vytvor(lnk, p.ciel, _argumenty(p), p.pracovny, _ikona_launchera(), f"{MARKER}: plocha", p.okno)
+        return True, f"Zástupca '{NAZOV_PLOCHA}' je na ploche"
+    except Exception as e:  # noqa: BLE001
+        log.exception("Zástupca launchera na ploche zlyhal")
+        return False, f"Zástupcu sa nepodarilo vytvoriť: {e}"
+
+
+def odstran_zastupcov(dir_startup: Path | None = None, dir_sendto: Path | None = None,
+                      dir_desktop: Path | None = None) -> list[str]:
+    """Odinštalovanie: zmaže VŠETKÝCH zástupcov vytvorených launcherom (Po spustení, Odoslať do, plocha).
+    Cudzích zástupcov (bez našej značky) nechá. Vráti zoznam zmazaných súborov."""
+    zmazane = []
+    priecinky = (Path(dir_startup) if dir_startup else priecinok("startup"),
+                 Path(dir_sendto) if dir_sendto else priecinok("sendto"),
+                 Path(dir_desktop) if dir_desktop else priecinok("desktop"))
+    for d in priecinky:
+        try:
+            lnky = sorted(d.glob("*.lnk"))
+        except OSError:
+            continue
+        for lnk in lnky:
+            try:
+                if _zmaz_ak_nas(lnk):
+                    zmazane.append(str(lnk))
+            except OSError as e:
+                log.warning("Zástupcu %s sa nepodarilo zmazať: %s", lnk, e)
+    return zmazane
+
+
 def vytvor_na_ploche(app: App, dir_desktop: Path | None = None) -> tuple[bool, str]:
     """Zástupca aplikácie na ploche (spustí ju cez launcher). Vráti (ok, správa)."""
     try:
