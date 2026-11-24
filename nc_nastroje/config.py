@@ -33,8 +33,13 @@ class Nastavenia:
     rezim: str = "plny"          # plny | prezeranie
     zobrazenie: str = "A"        # A | B
     tmavy_rezim: bool = False
+    interval_stavov_s: int = 30  # ako často sa obnovujú stavy aplikácií
 
     def __post_init__(self):
+        try:
+            self.interval_stavov_s = max(5, int(self.interval_stavov_s))
+        except (TypeError, ValueError):
+            self.interval_stavov_s = 30
         if not self.koren_nastrojov:
             self.koren_nastrojov = _predvoleny_koren(r"L\_Nastroje", r"L:\_Nastroje")
         if not self.koren_l:

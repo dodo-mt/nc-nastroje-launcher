@@ -6,7 +6,10 @@ from PIL import Image, ImageTk
 
 from ..config import IKONY_DIR
 from ..katalog import App
+from ..stavy import Stav
 from .tema import FONT, STAVY, SVETLA, Tooltip
+
+MAX_CIPOV = 8
 
 
 class Dlazdica(tk.Frame):
@@ -31,7 +34,7 @@ class Dlazdica(tk.Frame):
         tk.Label(self, text=app.popis, font=(FONT, 10), bg=t["karta"], fg=t["text2"], anchor="w")\
             .grid(row=1, column=1, columnspan=2, sticky="nw")
 
-        # Stavová bodka + text (fáza 2 ich bude meniť podľa adaptérov)
+        # Stavová bodka + text (mení ich `nastav_stav` podľa adaptérov)
         stav = tk.Frame(self, bg=t["karta"])
         stav.grid(row=0, column=2, sticky="ne", padx=16, pady=(20, 0))
         self._bodka = tk.Canvas(stav, width=12, height=12, bg=t["karta"], highlightthickness=0)
@@ -44,6 +47,10 @@ class Dlazdica(tk.Frame):
                         for _ in range(2)]
         for i, lbl in enumerate(self._riadky):
             lbl.grid(row=2 + i, column=0, columnspan=3, sticky="nw", padx=16, pady=(10 if i == 0 else 0, 0))
+        # Čipy (napr. stroje TNC Sync); riadok 4 sa naťahuje, čipy ostávajú hore
+        self._cipy = []
+        self._cipy_ram = tk.Frame(self, bg=t["karta"])
+        self._cipy_ram.grid(row=4, column=0, columnspan=3, sticky="nw", padx=16, pady=(8, 0))
         self.rowconfigure(4, weight=1)
 
         # Spodný riadok: verzia vľavo, tlačidlá vpravo
@@ -76,6 +83,31 @@ class Dlazdica(tk.Frame):
             w.bind("<Button-3>", lambda e: self.pri_menu(self.app, e))
         for d in w.winfo_children():
             self._zviaz(d)
+
+    def nastav_stav(self, stav: Stav | None):
+        """Zobrazí stav z adaptéra: bodka, text, 2 riadky, čipy. `None` = „Pripravený“."""
+        stav = stav or Stav("necinny", "Pripravený")
+        farba, predvoleny = STAVY.get(stav.stav, STAVY["nezname"])
+        self._bodka.itemconfigure(self._bodka_id, fill=farba)
+        self._stav_text.configure(text=stav.text or predvoleny)
+        for i, lbl in enumerate(self._riadky):
+            lbl.configure(text=stav.riadky[i] if i < len(stav.riadky) else "")
+        self._nastav_cipy(stav.cipy[:MAX_CIPOV])
+
+    def _nastav_cipy(self, cipy: list):
+        if cipy == self._cipy:
+            return
+        self._cipy = list(cipy)
+        for w in self._cipy_ram.winfo_children():
+            w.destroy()
+        t = SVETLA
+        for i, (text, stav) in enumerate(cipy):
+            c = tk.Frame(self._cipy_ram, bg=t["pozadie"], highlightbackground=t["okraj"], highlightthickness=1)
+            c.grid(row=i // 4, column=i % 4, sticky="w", padx=(0, 6), pady=(0, 4))
+            tk.Label(c, text="●", font=(FONT, 8), bg=t["pozadie"],
+                     fg=STAVY.get(stav, STAVY["nezname"])[0]).pack(side="left", padx=(6, 2))
+            tk.Label(c, text=text, font=(FONT, 9), bg=t["pozadie"], fg=t["text"]).pack(side="left", padx=(0, 6), pady=2)
+        self._zviaz(self._cipy_ram)
 
     def _spusti(self):
         self._pri_spusteni(self.app)

@@ -5,3 +5,12 @@ build/
 dist/
 *.spec
 .claude/
+
+# Logy obsahujú zákazky a cesty – nikdy na git, len lokálne
+*.log
+*.log.*
+
+# Generované stavové súbory z nastroje/vytvor_testovacie_data.py (čas sa mení)
+test_data/L/_Lupa/
+test_data/L/_tnc_sync/
+test_data/L/_Nastroje/_stav/

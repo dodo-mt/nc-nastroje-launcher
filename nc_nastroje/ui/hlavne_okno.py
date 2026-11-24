@@ -1,19 +1,21 @@
 """Hlavné okno – zobrazenie A (dlaždice)."""
 import logging
+import queue
+import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
 
 import sv_ttk
 
-from .. import spustac
-from ..config import Nastavenia, nacitaj_nastavenia, uloz_nastavenia
+from .. import spustac, stavy
+from ..config import LOCAL_DIR, Nastavenia, nacitaj_nastavenia, uloz_nastavenia
 from ..katalog import App, nacitaj_katalog
 from ..verzia import VERZIA
 from . import napoveda
 from .dlazdica import Dlazdica
 from .nastavenia import OknoNastaveni
-from .tema import FONT, SVETLA, Tooltip
+from .tema import FONT, STAVY, SVETLA, Tooltip
 
 log = logging.getLogger(__name__)
 STLPCE_ZUZENE_POD = 1000  # px: pri užšom okne 2 stĺpce
@@ -31,6 +33,10 @@ class HlavneOkno(tk.Tk):
         self.configure(bg=SVETLA["pozadie"])
         self.dlazdice: dict[str, Dlazdica] = {}
         self._stlpcov = 0
+        self._stavy: dict[str, stavy.Stav] = {}   # posledné prečítané stavy (prežijú prekreslenie dlaždíc)
+        self._fronta: queue.Queue = queue.Queue()  # výsledky z vlákna na pozadí
+        self._obnova_bezi = False
+        self._obnova_znova = False
 
         self._postav_menu()
         self._postav_horny_riadok()
@@ -41,11 +47,13 @@ class HlavneOkno(tk.Tk):
         self.mriezka.bind("<Configure>", lambda e: self._rozloz())
 
         self.bind("<F1>", lambda e: napoveda.ukaz_napovedu(self))
-        self.bind("<F5>", lambda e: self.nacitaj())  # fáza 2: obnoví aj stavy
+        self.bind("<F5>", lambda e: self.nacitaj())  # znova načíta katalóg aj stavy
         self.bind("<Control-f>", lambda e: (self.pole.focus_set(), self.pole.selection_range(0, "end")))
         for i in range(1, 7):
             self.bind(f"<Control-Key-{i}>", lambda e, i=i: self._spusti_podla_poradia(i - 1))
         self.nacitaj()
+        self.after(200, self._skontroluj_frontu)
+        self.after(self.nast.interval_stavov_s * 1000, self._casovac_stavov)
 
     # ---------- stavba UI ----------
     def _postav_menu(self):
@@ -87,6 +95,13 @@ class HlavneOkno(tk.Tk):
     def _postav_stavovy_riadok(self):
         s = tk.Frame(self, bg=SVETLA["pozadie"], highlightbackground=SVETLA["okraj"], highlightthickness=1)
         s.pack(side="bottom", fill="x")
+        self._disky = {}
+        for pismeno in ("L", "R"):
+            bodka = tk.Label(s, text="●", bg=SVETLA["pozadie"], fg=STAVY["nezname"][0], font=(FONT, 9))
+            bodka.pack(side="left", padx=(20 if pismeno == "L" else 12, 3), pady=6)
+            text = tk.Label(s, text=pismeno + ":\\ …", bg=SVETLA["pozadie"], fg=SVETLA["text2"], font=(FONT, 9))
+            text.pack(side="left")
+            self._disky[pismeno] = (bodka, text)
         self._rezim = tk.Label(s, bg=SVETLA["pozadie"], fg=SVETLA["text2"], font=(FONT, 9))
         self._rezim.pack(side="left", padx=20, pady=6)
         tk.Label(s, text=f"Aplikácie z {self.nast.koren_nastrojov} · launcher v {VERZIA}",
@@ -112,6 +127,60 @@ class HlavneOkno(tk.Tk):
         self.dlazdice = {a.id: Dlazdica(self.mriezka, a, self.spusti, self._menu_dlazdice) for a in apps}
         self._stlpcov = 0
         self._rozloz()
+        for id_, d in self.dlazdice.items():
+            d.nastav_stav(self._stavy.get(id_))   # posledné známe stavy hneď, čerstvé prídu z pozadia
+        self.obnov_stavy()
+
+    # ---------- stavy aplikácií (na pozadí) ----------
+    def _kontext(self) -> stavy.Kontext:
+        return stavy.Kontext(Path(self.nast.koren_nastrojov), Path(self.nast.koren_l),
+                             Path(self.nast.koren_r), LOCAL_DIR)
+
+    def obnov_stavy(self):
+        """Spustí čítanie stavov vo vlákne; UI nečaká. Ak už beží, po dobehnutí sa spustí znova."""
+        if self._obnova_bezi:
+            self._obnova_znova = True
+            return
+        self._obnova_bezi = True
+        apps, kontext = list(self.apps), self._kontext()
+
+        def praca():
+            try:
+                vysledok = stavy.obnov_vsetko(apps, kontext)
+            except Exception:  # noqa: BLE001
+                log.exception("Obnova stavov zlyhala")
+                vysledok = None
+            self._fronta.put(vysledok)
+        threading.Thread(target=praca, daemon=True, name="obnova-stavov").start()
+
+    def _skontroluj_frontu(self):
+        """Volá sa v hlavnom vlákne: prevezme výsledky z pozadia (bez `after` z cudzieho vlákna)."""
+        try:
+            while True:
+                vysledok = self._fronta.get_nowait()
+                self._obnova_bezi = False
+                if vysledok is not None:
+                    self._pouzi_stavy(vysledok)
+                if self._obnova_znova:
+                    self._obnova_znova = False
+                    self.obnov_stavy()
+        except queue.Empty:
+            pass
+        self.after(200, self._skontroluj_frontu)
+
+    def _casovac_stavov(self):
+        self.obnov_stavy()
+        self.after(self.nast.interval_stavov_s * 1000, self._casovac_stavov)
+
+    def _pouzi_stavy(self, v: "stavy.Vysledok"):
+        self._stavy.update(v.stavy)
+        for id_, d in self.dlazdice.items():
+            if id_ in v.stavy:
+                d.nastav_stav(v.stavy[id_])
+        for pismeno, ok, koren in (("L", v.l_ok, self.nast.koren_l), ("R", v.r_ok, self.nast.koren_r)):
+            bodka, text = self._disky[pismeno]
+            bodka.configure(fg=STAVY["ok" if ok else "chyba"][0])
+            text.configure(text=pismeno + ":\\ " + ("pripojený" if ok else "nedostupný"))
 
     def _rozloz(self):
         stlpcov = 2 if self.winfo_width() < STLPCE_ZUZENE_POD else 3

@@ -21,16 +21,18 @@ class OknoNastaveni(tk.Toplevel):
             "koren_r": tk.StringVar(value=nast.koren_r),
             "rezim": tk.StringVar(value=nast.rezim),
         }
+        self._interval = tk.StringVar(value=str(nast.interval_stavov_s))
 
         telo = ttk.Frame(self, padding=16)
         telo.pack(fill="both", expand=True)
-        self._sekcie = tk.Listbox(telo, exportselection=False, height=2, width=16, font=(FONT, 10), activestyle="none")
+        self._sekcie = tk.Listbox(telo, exportselection=False, height=3, width=16, font=(FONT, 10), activestyle="none")
         self._sekcie.grid(row=0, column=0, sticky="ns", padx=(0, 16))
-        for s in ("Cesty", "Režim"):
+        for s in ("Cesty", "Režim", "Stavy"):
             self._sekcie.insert("end", s)
         self._obsah = ttk.Frame(telo)
         self._obsah.grid(row=0, column=1, sticky="nsew")
-        self._strany = {"Cesty": self._cesty(self._obsah), "Režim": self._rezim(self._obsah)}
+        self._strany = {"Cesty": self._cesty(self._obsah), "Režim": self._rezim(self._obsah),
+                        "Stavy": self._stavy(self._obsah)}
         self._sekcie.bind("<<ListboxSelect>>", lambda e: self._ukaz())
         self._sekcie.selection_set(0)
         self._ukaz()
@@ -76,12 +78,22 @@ class OknoNastaveni(tk.Toplevel):
                         value="prezeranie", variable=self._v["rezim"]).grid(sticky="w", pady=6)
         return f
 
+    def _stavy(self, rodic):
+        f = ttk.Frame(rodic)
+        ttk.Label(f, text="Obnovovať stavy aplikácií každých").grid(row=0, column=0, sticky="w", pady=6)
+        sp = ttk.Spinbox(f, from_=5, to=600, increment=5, width=5, textvariable=self._interval)
+        sp.grid(row=0, column=1, padx=8)
+        ttk.Label(f, text="s").grid(row=0, column=2, sticky="w")
+        Tooltip(sp, "Ako často sa na pozadí načítajú stavy aplikácií (5 – 600 s). F5 obnoví hneď.")
+        return f
+
     def _prehladaj(self, kluc):
         cesta = filedialog.askdirectory(parent=self, initialdir=self._v[kluc].get() or None)
         if cesta:
             self._v[kluc].set(cesta.replace("/", "\\"))
 
     def _uloz(self):
-        nast = replace(self._nast, **{k: v.get().strip() for k, v in self._v.items()})
+        nast = replace(self._nast, **{k: v.get().strip() for k, v in self._v.items()},
+                       interval_stavov_s=self._interval.get().strip())
         self.destroy()
         self._pri_ulozeni(nast)

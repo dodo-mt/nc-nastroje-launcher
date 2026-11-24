@@ -4,6 +4,8 @@ Spustenie: python nastroje/vytvor_testovacie_data.py
 Nesiaha na skutočné L:/R:.
 """
 import json
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
 
 KOREN = Path(__file__).resolve().parent.parent / "test_data"
@@ -42,6 +44,39 @@ APLIKACIE = [
 STARE = {"nastrojovy_list": "2026.11.19-1"}
 
 
+def _zapis(cesta: Path, data: dict):
+    cesta.parent.mkdir(parents=True, exist_ok=True)
+    cesta.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def stavove_subory():
+    """Falošné stavy pre fázu 2 (časy vzhľadom na „teraz“, aby boli stále čerstvé).
+    Formáty: viď CLAUDE.md (subor_json) a skutočné súbory TNC Sync / Lupy."""
+    teraz = datetime.now().replace(microsecond=0)
+    iso = lambda dt: dt.isoformat(timespec="seconds")  # noqa: E731
+    # subor_json – Nástrojový list
+    _zapis(KOREN / "L" / "_Nastroje" / "_stav" / "nastrojovy_list" / "PC-PROG1.json", {
+        "stav": "ok", "riadky": ["Posledné spustenie: dnes", "Vygenerované listy: 12"],
+        "cipy": [{"text": "HTML", "stav": "ok"}, {"text": "PDF", "stav": "upozornenie"}],
+        "cas": iso(teraz - timedelta(minutes=20)), "pocitac": "PC-PROG1"})
+    # TNC Sync – _tnc_sync\_tnc_sync_stav.json (formát 1 zo skutočného TNC Sync)
+    koniec = teraz - timedelta(hours=1)
+    stroje = {n: {"last_try": iso(koniec), "last_ok": iso(koniec), "kind": "heidenhain", "error": ""}
+              for n in ("MB65 A", "MB65 B", "eVo 80", "H640")}
+    stroje["DMC 160"] = {"last_try": iso(koniec), "last_ok": iso(teraz - timedelta(days=1)),
+                         "kind": "heidenhain", "error": "stroj nedostupný"}
+    _zapis(KOREN / "L" / "_tnc_sync" / "_tnc_sync_stav.json", {
+        "format": 1, "written": iso(koniec), "pc": "PC-PROG1", "user": "test", "app_version": "2026.11.20-1",
+        "last_run": {"start": iso(koniec - timedelta(minutes=4)), "end": iso(koniec), "mode": "auto",
+                     "result": "UPOZORNENIE", "duration_s": 240, "machines_ok": 4, "machines_total": 5,
+                     "copied": 31, "failed": 0, "bytes": 1234567, "errors": []},
+        "machines": stroje})
+    # Lupa – lupa_scan.json vedľa databázy (L:\_Lupa)
+    _zapis(KOREN / "L" / "_Lupa" / "lupa_scan.json", {
+        "finished": time.time() - 3 * 3600, "errors": 0, "full": False, "jobs": 14, "files": 2310,
+        "version": "1.5.0"})
+
+
 def main():
     zaznamy = []
     for a in APLIKACIE:
@@ -61,6 +96,7 @@ def main():
         json.dumps({"verzia_formatu": 1, "aplikacie": zaznamy}, ensure_ascii=False, indent=2),
         encoding="utf-8")
     (KOREN / "R").mkdir(exist_ok=True)
+    stavove_subory()
     print("Hotovo:", NASTROJE)
 
 
