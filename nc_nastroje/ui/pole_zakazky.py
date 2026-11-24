@@ -34,6 +34,14 @@ class PoleZakazky(ttk.Entry):
         """Zadaný text (návod sa nepočíta)."""
         return "" if self._navod_aktivny else self.get().strip()
 
+    def vymaz(self):
+        """Po potvrdení hľadania: text zmizne (s fokusom prázdne pole, bez fokusu sivý návod)."""
+        self.delete(0, "end")
+        self._navod_aktivny = False
+        self.configure(foreground=PALETA["text"])
+        if self.focus_get() is not self:
+            self._vloz_navod()
+
     def fokus(self):
         self.focus_set()
         self.selection_range(0, "end")

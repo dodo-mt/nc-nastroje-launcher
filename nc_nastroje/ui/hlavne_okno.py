@@ -300,15 +300,22 @@ class HlavneOkno(TkinterDnD.Tk):
                                "(R: má len programy určené na nahratie do strojov).")
                 return
         if len(zhody) == 1:
-            self._otvor_zhodu(zhody[0], akcia)
+            self._otvor_zhodu(zhody[0], akcia, text)
         else:
-            VyberZakazky(self, zhody, lambda z: self._otvor_zhodu(z, akcia), "R:" if akcia == "R" else "L:")
+            VyberZakazky(self, zhody, lambda z: self._otvor_zhodu(z, akcia, text), "R:" if akcia == "R" else "L:")
 
-    def _otvor_zhodu(self, zhoda, akcia: str):
+    def _vymaz_pole(self, text: str):
+        """Hľadaný výraz po úspešnom potvrdení zmizne z poľa (len ak tam ešte je – nové písanie sa nemaže)."""
+        for pole in (self.pole, self._b.pole if self._b else None):
+            if pole is not None and pole.text().casefold() == text.strip().casefold():
+                pole.vymaz()
+
+    def _otvor_zhodu(self, zhoda, akcia: str, text: str = ""):
         cesta = zhoda.cesta(Path(self.nast.koren_r if akcia == "R" else self.nast.koren_l))
         try:
             vyhrada = priecinky.otvor_priecinok(cesta, self.nast.otvarat_v, self.nast.totalcmd_cesta)
             log.info("Otvorená zákazka %s", cesta)
+            self._vymaz_pole(text)
             self._potvrd(vyhrada or f"Otvorená zákazka {zhoda.zakazka} ({'R:' if akcia == 'R' else 'L:'}\\{zhoda.zakaznik}\\{zhoda.zakazka})")
         except OSError as e:
             log.exception("Otvorenie %s zlyhalo", cesta)
@@ -324,6 +331,8 @@ class HlavneOkno(TkinterDnD.Tk):
             self._upozorni("Lupa nie je v katalóge aplikácií.")
             return
         ok, sprava = spustac.spusti_hladaj(app, text)
+        if ok:
+            self._vymaz_pole(text)
         if not ok:
             self._upozorni(sprava)
         elif app.typ != "web" and not app.argumenty_hladat:

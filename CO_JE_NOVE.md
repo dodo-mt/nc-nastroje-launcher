@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.24-23
+- Pole „Číslo zákazky / výkresu“: po úspešnom otvorení priečinka (L:, R:) alebo po spustení hľadania v Lupe hľadaný
+  výraz zmizne. Pri chybe (zákazka sa nenašla, L: nedostupný) ostane, aby sa dal opraviť.
+
 ## 2026.11.24-22
 - Ak máš v Nastaveniach → Cesty zvolený Total Commander (a nájde sa), tlačidlá pri poli zákazky sa volajú
   „Otvoriť L: v TC“ a „Otvoriť R: v TC“ (v zozname „L: v TC“ / „R: v TC“, aj v okne z tray). Tooltip hovorí, že sa
