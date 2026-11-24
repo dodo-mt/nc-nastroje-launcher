@@ -109,9 +109,8 @@ class HlavneOkno(TkinterDnD.Tk):
         self._postav_pruh_dnd()
         self._obsah = tk.Frame(self, bg=PALETA["pozadie"])      # sem sa vkladá zobrazenie A (mriežka) alebo B
         self._obsah.pack(fill="both", expand=True)
-        self.mriezka = tk.Frame(self._obsah, bg=PALETA["pozadie"])
+        self._postav_mriezku()
         self._postav_stavovy_riadok()
-        self.mriezka.bind("<Configure>", lambda e: self._rozloz())
         self._zobraz_pohlad()
 
         self.bind("<F1>", lambda e: napoveda.ukaz_napovedu(self))
@@ -466,13 +465,13 @@ class HlavneOkno(TkinterDnD.Tk):
                 self._aktualizuj_tip_indexu()
                 self._obnov_popisky_otvorenia()
             self._horny_riadok.pack_forget()
-            self.mriezka.pack_forget()
+            self._skrol.pack_forget()
             self._b.pack(fill="both", expand=True)
         else:
             if self._b:
                 self._b.pack_forget()
             self._horny_riadok.pack(fill="x", padx=20, pady=(16, 12), before=self._kotva_hore)
-            self.mriezka.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+            self._skrol.pack(fill="both", expand=True, padx=20, pady=(0, 12))
 
     def _uloz_nastavenia_ticho(self):
         try:
@@ -725,6 +724,7 @@ class HlavneOkno(TkinterDnD.Tk):
         for id_, d in self.dlazdice.items():
             if id_ in v.stavy:
                 d.nastav_stav(self._stav_pre(id_))
+        self.after_idle(self._prepocitaj_riadky)
         self._disky_ok = {"L": v.l_ok, "R": v.r_ok}
         self._publikuj_tray()
         self.obnov_index()                          # raz denne (a len ak je L: dostupný)
@@ -732,6 +732,52 @@ class HlavneOkno(TkinterDnD.Tk):
             bodka, text = self._disky[pismeno]
             bodka.configure(fg=STAVY["ok" if ok else "chyba"][0])
             text.configure(text=pismeno + ":\\ " + ("pripojený" if ok else "nedostupný"))
+
+    def _postav_mriezku(self):
+        """Mriežka dlaždíc v rolovateľnej ploche: dlaždice majú minimálnu výšku (aby sa neorezali tlačidlá
+        Spustiť) a ak sa pri malom okne nezmestia, objaví sa posuvník."""
+        bg = PALETA["pozadie"]
+        self._skrol = tk.Frame(self._obsah, bg=bg)
+        self._platno = tk.Canvas(self._skrol, bg=bg, highlightthickness=0, yscrollincrement=40)
+        self._rolovac = ttk.Scrollbar(self._skrol, orient="vertical", command=self._platno.yview)
+        self._platno.configure(yscrollcommand=self._rolovac.set)
+        self._platno.pack(side="left", fill="both", expand=True)
+        self.mriezka = tk.Frame(self._platno, bg=bg)
+        self._platno_okno = self._platno.create_window(0, 0, window=self.mriezka, anchor="nw")
+        self._platno.bind("<Configure>", lambda e: self._platno_zmena())
+        self.mriezka.bind("<Configure>", lambda e: (self._rozloz(), self._platno_zmena()))
+        self.bind_all("<MouseWheel>", self._koliesko, add="+")
+
+    def _platno_zmena(self):
+        w, h = self._platno.winfo_width(), self._platno.winfo_height()
+        potrebna = self.mriezka.winfo_reqheight()
+        self._platno.itemconfigure(self._platno_okno, width=w, height=max(h, potrebna))
+        self._platno.configure(scrollregion=(0, 0, w, max(h, potrebna)))
+        if potrebna > h + 1:
+            if not self._rolovac.winfo_ismapped():
+                self._rolovac.pack(side="right", fill="y")
+        elif self._rolovac.winfo_ismapped():
+            self._rolovac.pack_forget()
+            self._platno.yview_moveto(0)
+
+    def _prepocitaj_riadky(self):
+        """Minimálna výška riadku mriežky = najvyššia dlaždica (stav a čipy ju môžu zväčšiť)."""
+        if not self.dlazdice or not self._stlpcov:
+            return
+        vyska = max(d.winfo_reqheight() for d in self.dlazdice.values()) + 12
+        for r in range(8):
+            self.mriezka.rowconfigure(r, minsize=vyska if r < -(-len(self.dlazdice) // self._stlpcov) else 0)
+        self.after_idle(self._platno_zmena)
+
+    def _koliesko(self, e):
+        if self._zobrazenie != "A" or not self._rolovac.winfo_ismapped():
+            return
+        try:
+            if e.widget.winfo_toplevel() is not self:
+                return
+        except (AttributeError, tk.TclError, KeyError):
+            return
+        self._platno.yview_scroll(-1 if e.delta > 0 else 1, "units")
 
     def _rozloz(self):
         if self._zobrazenie != "A":
@@ -746,9 +792,10 @@ class HlavneOkno(TkinterDnD.Tk):
         for c in range(6):
             self.mriezka.columnconfigure(c, weight=1 if c < stlpcov else 0, uniform="s" if c < stlpcov else "")
         for r in range(8):
-            self.mriezka.rowconfigure(r, weight=1 if r < riadkov else 0, uniform="r" if r < riadkov else "")
+            self.mriezka.rowconfigure(r, weight=1 if r < riadkov else 0)
         for i, d in enumerate(self.dlazdice.values()):
             d.grid(row=i // stlpcov, column=i % stlpcov, sticky="nsew", padx=6, pady=6)
+        self.after_idle(self._prepocitaj_riadky)
 
     # ---------- drag & drop ----------
     def _nastav_dnd(self):

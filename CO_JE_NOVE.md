@@ -1,5 +1,10 @@
 # Čo je nové
 
+## 2026.11.24-24
+- Oprava: pri zmenšení okna na minimum sa z dlaždíc strácali tlačidlá Spustiť / Otvoriť (dlaždice sa zmenšili pod svoj
+  obsah). Dlaždice si teraz držia potrebnú výšku a ak sa pri malom okne nezmestia, vpravo sa objaví posuvník
+  (aj koliesko myši).
+
 ## 2026.11.24-23
 - Pole „Číslo zákazky / výkresu“: po úspešnom otvorení priečinka (L:, R:) alebo po spustení hľadania v Lupe hľadaný
   výraz zmizne. Pri chybe (zákazka sa nenašla, L: nedostupný) ostane, aby sa dal opraviť.
