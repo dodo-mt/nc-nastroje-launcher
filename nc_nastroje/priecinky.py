@@ -53,6 +53,22 @@ def najdi_total_commander(nastavena: str = "") -> Path | None:
     return None
 
 
+def popisky_otvorenia(otvarat_v: str, totalcmd_cesta: str = "") -> dict:
+    """Texty tlačidiel Otvoriť L: / R:. Total Commander sa ukáže len ak je zvolený A aj nájdený –
+    inak by text sľuboval niečo, čo sa nestane (otvoril by sa Prieskumník)."""
+    if otvarat_v == "totalcmd" and najdi_total_commander(totalcmd_cesta):
+        return {
+            "L": ("Otvoriť L: v TC", "L: v TC",
+                  "Nájde priečinok zákazky a otvorí ho na L:\ v Total Commanderi (nová záložka) (Enter)"),
+            "R": ("Otvoriť R: v TC", "R: v TC",
+                  "Otvorí rovnakú cestu na R:\ v Total Commanderi (nová záložka)"),
+        }
+    return {
+        "L": ("Otvoriť L:", "Otvoriť L:", "Nájde priečinok zákazky a otvorí ho na L:\ (Enter)"),
+        "R": ("Otvoriť R:", "R:", "Otvorí rovnakú cestu na R:\ (programy na nahratie do strojov)"),
+    }
+
+
 def prikaz_total_commander(exe, cesta) -> str:
     """Príkazový riadok: /O = použiť bežiaci Total Commander, /T = nová záložka, /L = ľavý panel."""
     return f'"{exe}" /O /T /L="{cesta}"'

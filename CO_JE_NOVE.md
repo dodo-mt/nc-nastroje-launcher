@@ -1,5 +1,10 @@
 # Čo je nové
 
+## 2026.11.24-22
+- Ak máš v Nastaveniach → Cesty zvolený Total Commander (a nájde sa), tlačidlá pri poli zákazky sa volajú
+  „Otvoriť L: v TC“ a „Otvoriť R: v TC“ (v zozname „L: v TC“ / „R: v TC“, aj v okne z tray). Tooltip hovorí, že sa
+  otvorí nová záložka. Texty sa zmenia hneď po uložení Nastavení. Ak sa Total Commander nenájde, ostáva „Otvoriť L:“.
+
 ## 2026.11.24-21
 - Oprava: čierne menu v tmavom režime (Súbor, Zobraziť, Nápoveda) sa neotváralo – Tk vyžaduje, aby menu patrilo priamo
   tlačidlu. Stavový riadok dole sa pri nižšom okne v tmavom režime stratil (čierny pás menu zabral miesto) – teraz sa mu

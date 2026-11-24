@@ -38,3 +38,13 @@ def test_totalcmd_nenajdeny_otvori_prieskumnik(monkeypatch):
 def test_nastavenia_otvarat_v_sa_normalizuje():
     assert Nastavenia(otvarat_v="nieco").otvarat_v == "prieskumnik"
     assert Nastavenia(otvarat_v="totalcmd").otvarat_v == "totalcmd"
+
+
+def test_popisky_otvorenia(tmp_path, monkeypatch):
+    exe = tmp_path / "TOTALCMD64.EXE"
+    exe.write_text("x")
+    assert priecinky.popisky_otvorenia("prieskumnik", str(exe))["L"][0] == "Otvoriť L:"
+    assert priecinky.popisky_otvorenia("totalcmd", str(exe))["L"][0] == "Otvoriť L: v TC"
+    assert priecinky.popisky_otvorenia("totalcmd", str(exe))["R"][1] == "R: v TC"
+    monkeypatch.setattr(priecinky, "najdi_total_commander", lambda c="": None)   # nenájdený → ostáva Prieskumník
+    assert priecinky.popisky_otvorenia("totalcmd", "")["L"][0] == "Otvoriť L:"

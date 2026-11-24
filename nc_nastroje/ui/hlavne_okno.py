@@ -215,7 +215,11 @@ class HlavneOkno(TkinterDnD.Tk):
         ]):
             b = ttk.Button(r, text=text, style=styl, command=lambda a=akcia: self.rychla_akcia(a))
             b.grid(row=0, column=i + 1, padx=(0, 8) if i < 2 else 0, ipady=4)
-            Tooltip(b, tip)
+            tp = Tooltip(b, tip)
+            if akcia in ("L", "R"):
+                self._tl_otvorit_a = getattr(self, "_tl_otvorit_a", {})
+                self._tl_otvorit_a[akcia] = (b, tp)
+        self._obnov_popisky_otvorenia()
 
     # ---------- rýchle akcie: pole zákazky ----------
     def aktivne_pole(self) -> PoleZakazky:
@@ -234,6 +238,18 @@ class HlavneOkno(TkinterDnD.Tk):
         self._pole_tip.text = text
         if self._b:
             self._b.pole_tip.text = text
+
+    def _obnov_popisky_otvorenia(self):
+        """Tlačidlá Otvoriť L: / R: (A, B aj malé okno z tray) podľa Nastavenia → Cesty (Prieskumník / Total Commander)."""
+        pop = priecinky.popisky_otvorenia(self.nast.otvarat_v, self.nast.totalcmd_cesta)
+        for a, (b, tp) in getattr(self, "_tl_otvorit_a", {}).items():
+            b.config(text=pop[a][0])
+            tp.text = pop[a][2]
+        if self._b is not None:
+            self._b.nastav_popisky(pop)
+        okno = getattr(self, "_okno_zakazky", None)
+        if okno is not None and okno.winfo_exists():
+            okno.nastav_popisky(pop)
 
     def rychla_akcia(self, akcia: str, text: str | None = None):
         """akcia: L (otvoriť na L:) | R (rovnaká cesta na R:) | lupa. Hľadanie beží na pozadí, UI nečaká na sieť."""
@@ -439,6 +455,7 @@ class HlavneOkno(TkinterDnD.Tk):
             if self._b is None:
                 self._b = ZoznamDetail(self._obsah, self)
                 self._aktualizuj_tip_indexu()
+                self._obnov_popisky_otvorenia()
             self._horny_riadok.pack_forget()
             self.mriezka.pack_forget()
             self._b.pack(fill="both", expand=True)
@@ -934,6 +951,7 @@ class HlavneOkno(TkinterDnD.Tk):
             okno.focus_force()
             return
         self._okno_zakazky = OknoZakazky(self, self.rychla_akcia)
+        self._okno_zakazky.nastav_popisky(priecinky.popisky_otvorenia(self.nast.otvarat_v, self.nast.totalcmd_cesta))
 
     def _oznam(self, text: str):
         """Správa používateľovi: v pruhu, ak je okno vidieť, inak oznámením z tray."""
@@ -1138,6 +1156,7 @@ class HlavneOkno(TkinterDnD.Tk):
             self._index = zakazky.IndexZakaziek(Path(nast.koren_l))
             self._aktualizuj_tip_indexu()
         self._aktualizuj_rezim()
+        self._obnov_popisky_otvorenia()
         self._aplikuj_windows(stara, nast)
         if nast.klavesova_skratka != stara.klavesova_skratka:
             self._nastav_skratku()

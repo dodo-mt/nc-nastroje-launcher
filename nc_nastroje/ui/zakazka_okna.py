@@ -91,12 +91,15 @@ class OknoZakazky(tk.Toplevel):
         Tooltip(self._pole, "Napr. 21930, OD21930, OD00021930 alebo OD626\\001252 (Enter = otvoriť na L:)")
         tl = ttk.Frame(telo)
         tl.pack(fill="x")
+        self._tl = {}
         for text, akcia, styl, tip in (("Hľadať v Lupe", "lupa", "TButton", "Otvorí Lupu s hľadaným textom"),
                                        ("Otvoriť R:", "R", "TButton", "Otvorí rovnakú cestu na R:\\"),
                                        ("Otvoriť L:", "L", "Accent.TButton", "Otvorí priečinok zákazky na L:\\")):
             b = ttk.Button(tl, text=text, style=styl, command=lambda a=akcia: self._akcia(a))
             b.pack(side="right", padx=(8, 0))
-            Tooltip(b, tip)
+            tp = Tooltip(b, tip)
+            if akcia in ("L", "R"):
+                self._tl[akcia] = (b, tp)
         self._pole.bind("<Return>", lambda e: self._akcia("L"))
         self.bind("<Escape>", lambda e: self.destroy())
         centruj(self, rodic)
@@ -105,6 +108,11 @@ class OknoZakazky(tk.Toplevel):
         self.lift()
         self.focus_force()
         self._pole.focus_set()
+
+    def nastav_popisky(self, pop: dict):
+        for a, (b, tp) in self._tl.items():
+            b.config(text=pop[a][0])
+            tp.text = pop[a][2]
 
     def _akcia(self, akcia: str):
         text = self._pole.get().strip()

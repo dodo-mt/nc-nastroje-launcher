@@ -331,12 +331,15 @@ class ZoznamDetail(tk.Frame):
         self.pole_tip = Tooltip(self.pole, "")
         akcie = tk.Frame(lavy, bg=t["pozadie"])
         akcie.pack(fill="x", padx=16)
+        self._tl = {}
         for i, (text, a, tip) in enumerate((("Otvoriť L:", "L", "Nájde priečinok zákazky a otvorí ho na L:\\ (Enter)"),
                                             ("R:", "R", "Otvorí rovnakú cestu na R:\\"),
                                             ("Lupa", "lupa", "Otvorí Lupu s hľadaným textom"))):
             b = ttk.Button(akcie, text=text, command=lambda a=a: okno.rychla_akcia(a))
             b.pack(side="left", fill="x", expand=(i == 0), padx=(0, 6 if i < 2 else 0))
-            Tooltip(b, tip)
+            tp = Tooltip(b, tip)
+            if a in ("L", "R"):
+                self._tl[a] = (b, tp)
         tk.Label(lavy, text="APLIKÁCIE", font=(FONT, 9, "bold"), bg=t["pozadie"], fg=t["text2"], anchor="w").pack(
             fill="x", padx=20, pady=(22, 6))
         self._zoznam = tk.Frame(lavy, bg=t["pozadie"])
@@ -344,6 +347,11 @@ class ZoznamDetail(tk.Frame):
 
         self.detail = DetailAplikacie(self, okno)
         self.detail.pack(side="left", fill="both", expand=True, padx=(0, 0))
+
+    def nastav_popisky(self, pop: dict):
+        for a, (b, tp) in self._tl.items():
+            b.config(text=pop[a][1])
+            tp.text = pop[a][2]
 
     def postav(self, apps: list[App], pri_spusteni, pri_menu) -> dict[str, RiadokZoznamu]:
         """(Znova) vytvorí riadky zoznamu; výber sa zachová, inak prvá aplikácia."""
