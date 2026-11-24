@@ -15,6 +15,9 @@ Pravé tlačidlo na dlaždici = ďalšie akcie.
 Aplikácie, ktoré ich prijímajú, sa zvýraznia (ostatné zosivejú). Pusti ich na zvýraznenú
 dlaždicu – aplikácia sa spustí s týmito súbormi. Esc = zrušiť ťahanie.
 
+Zatvorenie okna (X) ho len skryje do oblasti oznámení. Ukončiť: Súbor → Ukončiť alebo pravý klik na ikonu → Ukončiť.
+Dvojklik na ikonu v oblasti oznámení otvorí okno.
+
 Klávesy:
   F1        Nápoveda
   F5        Obnoviť

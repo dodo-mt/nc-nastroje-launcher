@@ -22,12 +22,13 @@ IKONA_PX = 44
 
 
 class Dlazdica(tk.Frame):
-    def __init__(self, rodic, app: App, pri_spusteni, pri_menu):
+    def __init__(self, rodic, app: App, pri_spusteni, pri_menu, pri_pozastaveni=None):
         t = SVETLA
         super().__init__(rodic, bg=t["karta"], highlightthickness=0)
         self.app = app
         self._pri_spusteni = pri_spusteni
         self.pri_menu = pri_menu
+        self._pri_pozastaveni = pri_pozastaveni
         self._chyba_id = None
         self._stav = Stav("necinny", "Pripravený")
         self._dnd = "normal"
@@ -89,10 +90,11 @@ class Dlazdica(tk.Frame):
         tlacidla.grid(row=0, column=1, sticky="se")
         self._ttk_tlacidla: list[tuple[ttk.Button, bool]] = []   # (tlačidlo, je povolené)
         if app.pozastavit:
-            b = ttk.Button(tlacidla, text="Pozastaviť", state="disabled")
-            b.pack(side="left", padx=(0, 8))
-            Tooltip(b, "Pozastaví triedenie (pripravuje sa vo fáze 5)")
-            self._ttk_tlacidla.append((b, False))
+            self._pozastavit_btn = ttk.Button(tlacidla, text="Pozastaviť", command=self._pozastavit)
+            self._pozastavit_btn.pack(side="left", padx=(0, 8))
+            Tooltip(self._pozastavit_btn, "Požiada aplikáciu o pozastavenie (lokálna požiadavka – aplikácia ju "
+                                          "musí podporovať, viď docs/zmeny_v_aplikaciach.md)")
+            self._ttk_tlacidla.append((self._pozastavit_btn, True))
         styl = "TButton" if app.pozastavit else "Accent.TButton"
         self._tlacidlo = ttk.Button(tlacidla, text=app.tlacidlo, style=styl, command=self._spusti)
         self._tlacidlo.pack(side="left")
@@ -113,6 +115,15 @@ class Dlazdica(tk.Frame):
             w.bind("<Button-3>", lambda e: self.pri_menu(self.app, e), add="+")
         for d in w.winfo_children():
             self._zviaz(d)
+
+    def nastav_pozastaveny(self, pozastaveny: bool):
+        """Text tlačidla Pozastaviť / Pokračovať (len pre aplikácie s `pozastavit`)."""
+        if self.app.pozastavit:
+            self._pozastavit_btn.configure(text="Pokračovať" if pozastaveny else "Pozastaviť")
+
+    def _pozastavit(self):
+        if self._pri_pozastaveni:
+            self._pri_pozastaveni(self.app)
 
     def nastav_verziu(self, text: str):
         """Text vľavo dole: `v 2026.11.24-1`, `v 2026.11.19-1 → 11.24-1`, `web`."""

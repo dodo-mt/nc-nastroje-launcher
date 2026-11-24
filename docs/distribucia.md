@@ -48,7 +48,20 @@ python nastroje/publikuj.py launcher C:\build\nc_nastroje --verzia 2026.11.25-1
 Bez `--koren` sa použije koreň z nastavení (pri vývoji falošný `test_data\L\_Nastroje`). Pri skutočnom koreni
 sa skript opýta na potvrdenie. Záznam aplikácie musí v `apps.json` už existovať (`launcher` tiež).
 
+## Štartér a zástupcovia (fáza 5)
+
+Zástupcovia v „Po spustení“, „Odoslať do“ a na ploche nemieria priamo na `nc_nastroje.exe`, ale (v zostavenom exe)
+na štartér `%LOCALAPPDATA%\NC_Nastroje\spustit_launcher.bat`. Ten spustí `launcher\<verzia z aktualna.txt>\nc_nastroje.exe`
+(po aktualizácii launchera sa tak spustí nová verzia) a ak `aktualna.txt` chýba, záložný exe, z ktorého bol štartér
+vytvorený. Zo zdrojového kódu (vývoj) zástupcovia spúšťajú `pythonw -m nc_nastroje.main`.
+
+Zástupcov vytvára a maže len launcher a len takých, ktorých popis začína „NC Nástroje (spúšťač)“; cudzích nikdy.
+
+## Jedna inštancia
+
+Prvý launcher obsadí `127.0.0.1:<port_instancie>` (predvolene 47653, v `nastavenia.json`) a počúva. Druhé spustenie
+pošle príkaz (zobraz / tray / aplikacia / cesty) s tokenom z `%LOCALAPPDATA%\NC_Nastroje\instancia.token` a skončí.
+
 ## Na neskôr (fáza 8, nasadenie pre kolegov)
 
-Štartér (zástupca / malý `.bat`) musí spúšťať launcher z `launcher\<verzia z aktualna.txt>\nc_nastroje.exe`, aby sa
-po aktualizácii spustila nová verzia aj pri ďalšom štarte (aktualizátor ju spustí hneď sám).
+Prvá inštalácia (kópia zostaveného launchera do `launcher\<verzia>\` a zápis `aktualna.txt`) – štartér to už vie použiť.

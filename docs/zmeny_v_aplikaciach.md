@@ -19,6 +19,23 @@ Ak má aplikácia ukazovať stav na dlaždici (napr. Nástrojový list), po behu
 
 TNC Sync a Lupa už stavový súbor zapisujú (`_tnc_sync_stav.json`, `lupa_scan.json`) – tam netreba nič meniť.
 
+## Pozastavenie Triediča NC – príznakový súbor
+
+Tlačidlo Pozastaviť na dlaždici a položka „Pozastaviť triedič“ v tray zapíšu LOKÁLNY príznak
+`%LOCALAPPDATA%\NC_Nastroje\ovladanie\triedic_nc.pozastaveny` (obsah nie je dôležitý) a pri Pokračovať ho zmažú.
+Na L: ani R: sa nezapisuje nič. Launcher kód Triediča nemení, preto **zatiaľ nemá žiadny účinok**, kým Triedič
+príznak nezačne čítať.
+
+Návrh pre Triedič NC: pred spracovaním každého programu (alebo raz za pár sekúnd) skontrolovať, či príznak existuje.
+Ak áno, nič netriediť a počkať (programy ostávajú v `NC\`); po zmiznutí príznaku pokračovať. V tray ikone Triediča
+stačí ukázať „Pozastavené“. Launcher zobrazuje stav „Pozastavený (požiadavka)“ a nič viac nepredpokladá.
+
+## Parametre pre „Odoslať do“ a zástupcov – všetky aplikácie s `prijima`
+
+Zástupcovia (Odoslať do, plocha) spúšťajú `nc_nastroje.exe --aplikacia <id> <cesta1> <cesta2> …`; launcher aplikáciu
+spustí so zoznamom ciest ako s argumentmi (alebo `@subor.txt`, viď nižšie). Aplikácie netreba meniť, kým už čítajú
+cesty z `sys.argv`.
+
 ## Zoznam ciest v súbore `@subor.txt` – všetky aplikácie s `prijima`
 
 Keď launcher dostane veľa súborov (príkazový riadok by presiahol ~30 000 znakov), zapíše cesty do

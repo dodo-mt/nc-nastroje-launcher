@@ -1,5 +1,15 @@
 # Čo je nové
 
+## 2026.11.24-5
+- Fáza 5 – tray a Windows: ikona v oblasti oznámení so stavovou bodkou (najhorší stav), menu s aplikáciami
+  (klik = spustiť), Pozastaviť triedič, Otvoriť zákazku…, Otvoriť NC Nástroje (aj dvojklik), Ukončiť.
+- Zatvorenie okna (X) ho len skryje do tray (prvýkrát oznámenie). Ukončiť sa dá z menu Súbor alebo z tray.
+- Jedna inštancia: druhé spustenie prenesie okno do popredia alebo odovzdá argumenty a skončí.
+- Príkazový riadok: `--tray`, `--aplikacia <id> [cesty]` (Odoslať do), `[cesty]` (výber kompatibilnej aplikácie).
+- Nastavenia → Windows: spustiť po prihlásení, spustiť aplikácie označené v katalógu, výber aplikácií pre Odoslať do.
+- Menu dlaždice: Vytvoriť zástupcu na ploche. Tlačidlo Pozastaviť zapíše lokálnu požiadavku (aplikácia ju musí podporovať).
+- Oprava: zástupcovia (.lnk) uvoľňujú COM objekty pred ukončením COM (predtým mohol spadnúť proces).
+
 ## 2026.11.24-4
 - Fáza 4 – distribúcia: aplikácie sa spúšťajú z lokálnych kópií (`%LOCALAPPDATA%\NC_Nastroje\apps`), nie z L:.
 - Pri štarte a potom každých 10 min sa porovná verzia v `apps.json` s lokálnou a novšia sa skopíruje na pozadí.
