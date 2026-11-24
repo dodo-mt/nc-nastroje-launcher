@@ -244,6 +244,25 @@ def test_proces_bezi_a_nebezi(k, tmp_path):
     assert stavy.precitaj_stav(a, k).stav == "necinny"
 
 
+def test_proces_rozpozna_cestu_s_lomitkami_a_inou_velkostou_pismen(k):
+    """Cesta v argumente procesu môže mať `/` a inú veľkosť písmen než naša (regresia z fázy 4)."""
+    zdroj = k.koren_nastrojov / "Moja_App" / "1.0"
+    zdroj.mkdir(parents=True)
+    skript = zdroj / "ciel.py"
+    skript.write_text("import time; time.sleep(60)", encoding="utf-8")
+    a = app_s({"adapter": "proces"}, id="moja_app", zdroj="Moja_App\\1.0", spustit="ciel.py")
+    p = subprocess.Popen([sys.executable, skript.as_posix().upper().replace("CIEL.PY", "ciel.py")])
+    try:
+        for _ in range(50):
+            if stavy.precitaj_stav(a, k).stav == "ok":
+                break
+            time.sleep(0.1)
+        assert stavy.precitaj_stav(a, k).stav == "ok"
+    finally:
+        p.kill()
+        p.wait()
+
+
 def test_proces_webova_aplikacia_nebezi(k):
     assert stavy.precitaj_stav(app_s({"adapter": "proces"}, typ="web"), k).stav == "necinny"
 

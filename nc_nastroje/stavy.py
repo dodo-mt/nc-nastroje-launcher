@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
@@ -178,13 +179,18 @@ def _subor_json(app: App, k: Kontext) -> Stav:
 
 
 # ---------- adaptér: proces ----------
+def _norm(cesta) -> str:
+    """Cesta na porovnanie: zjednotené lomítka, malé písmená, bez koncového lomítka."""
+    return os.path.normcase(os.path.normpath(str(cesta)))
+
+
 def _priecinky_aplikacie(app: App, k: Kontext) -> list[str]:
     priecinky = []
     if app.zdroj:
         priecinky.append(Path(k.koren_nastrojov) / app.zdroj)
     if k.local_dir:
         priecinky.append(Path(k.local_dir) / "apps" / app.id)
-    return [str(p).lower().rstrip("\\/") + "\\" for p in priecinky]
+    return [_norm(p) + os.sep for p in priecinky]
 
 
 def _bezi_proces(app: App, k: Kontext) -> bool:
@@ -196,9 +202,14 @@ def _bezi_proces(app: App, k: Kontext) -> bool:
             cesty = [p.info.get("exe") or ""] + list(p.info.get("cmdline") or [])
         except (psutil.Error, OSError):
             continue
-        if any(str(c).lower().startswith(priecinky) for c in cesty if c):
+        if any(_norm(c).startswith(priecinky) for c in cesty if c):
             return True
     return False
+
+
+def bezi_aplikacia(app: App, k: Kontext) -> bool:
+    """Beží aplikácia (proces z jej priečinka na L: alebo z lokálnych kópií)?"""
+    return _bezi_proces(app, k)
 
 
 @adapter("proces")

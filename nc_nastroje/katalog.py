@@ -57,20 +57,24 @@ def _app_zo_slovnika(d: dict) -> App:
     return App(**hodnoty)
 
 
-def nacitaj_katalog(cesta: Path) -> tuple[list[App], list[str]]:
-    """Vráti (aplikácie, chyby). Nikdy nevyhodí výnimku kvôli obsahu súboru."""
-    chyby: list[str] = []
+def _zaznamy_z_textu(text: str) -> list | None:
+    """Zoznam záznamov z textu apps.json, alebo None, ak štruktúra nie je platná."""
     try:
-        data = json.loads(Path(cesta).read_text(encoding="utf-8"))
-    except (OSError, ValueError) as e:
-        msg = f"apps.json sa nepodarilo načítať: {e}"
-        log.error(msg)
-        return [], [msg]
+        data = json.loads(text)
+    except ValueError:
+        return None
     zaznamy = data.get("aplikacie") if isinstance(data, dict) else None
-    if not isinstance(zaznamy, list):
-        msg = "apps.json: chýba zoznam 'aplikacie'"
+    return zaznamy if isinstance(zaznamy, list) else None
+
+
+def nacitaj_katalog_z_textu(text: str) -> tuple[list[App], list[str]]:
+    """Vráti (aplikácie, chyby). Chybný záznam sa preskočí a zaloguje, nikdy nevyhodí výnimku."""
+    zaznamy = _zaznamy_z_textu(text)
+    if zaznamy is None:
+        msg = "apps.json: chýba zoznam 'aplikacie' alebo nie je platný JSON"
         log.error(msg)
         return [], [msg]
+    chyby: list[str] = []
     apps, videne = [], set()
     for i, z in enumerate(zaznamy):
         try:
@@ -84,3 +88,26 @@ def nacitaj_katalog(cesta: Path) -> tuple[list[App], list[str]]:
             log.warning(msg)
             chyby.append(msg)
     return apps, chyby
+
+
+def nacitaj_katalog(cesta: Path) -> tuple[list[App], list[str]]:
+    """Vráti (aplikácie, chyby). Nikdy nevyhodí výnimku kvôli obsahu súboru."""
+    try:
+        text = Path(cesta).read_text(encoding="utf-8")
+    except (OSError, ValueError) as e:
+        msg = f"apps.json sa nepodarilo načítať: {e}"
+        log.error(msg)
+        return [], [msg]
+    return nacitaj_katalog_z_textu(text)
+
+
+def launcher_z_textu(text: str) -> dict | None:
+    """Záznam `launcher` z apps.json: {verzia, zdroj, spustit, co_je_nove} alebo None (chýba / chybný)."""
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return None
+    zaznam = data.get("launcher") if isinstance(data, dict) else None
+    if not isinstance(zaznam, dict) or not zaznam.get("verzia") or not zaznam.get("zdroj"):
+        return None
+    return {k: str(zaznam.get(k) or "") for k in ("verzia", "zdroj", "spustit", "co_je_nove")}

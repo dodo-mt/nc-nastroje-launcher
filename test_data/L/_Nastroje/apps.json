@@ -118,5 +118,11 @@
       "spustit": "fiktivna_app.py",
       "argumenty": "{cesty}"
     }
-  ]
+  ],
+  "launcher": {
+    "verzia": "2026.11.24-1",
+    "zdroj": "launcher\\2026.11.24-1",
+    "spustit": "nc_nastroje.exe",
+    "co_je_nove": "launcher\\CO_JE_NOVE.md"
+  }
 }

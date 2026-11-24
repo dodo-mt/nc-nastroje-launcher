@@ -83,7 +83,8 @@ class Dlazdica(tk.Frame):
         spodok.grid(row=5, column=0, columnspan=3, sticky="sew", padx=16, pady=(0, 16))
         spodok.columnconfigure(0, weight=1)
         verzia = "web" if app.typ == "web" else f"v {app.verzia}"
-        tk.Label(spodok, text=verzia, font=(FONT, 9), bg=t["karta"], fg=t["text2"]).grid(row=0, column=0, sticky="sw")
+        self._verzia_lbl = tk.Label(spodok, text=verzia, font=(FONT, 9), bg=t["karta"], fg=t["text2"])
+        self._verzia_lbl.grid(row=0, column=0, sticky="sw")
         tlacidla = tk.Frame(spodok, bg=t["karta"])
         tlacidla.grid(row=0, column=1, sticky="se")
         self._ttk_tlacidla: list[tuple[ttk.Button, bool]] = []   # (tlačidlo, je povolené)
@@ -112,6 +113,10 @@ class Dlazdica(tk.Frame):
             w.bind("<Button-3>", lambda e: self.pri_menu(self.app, e), add="+")
         for d in w.winfo_children():
             self._zviaz(d)
+
+    def nastav_verziu(self, text: str):
+        """Text vľavo dole: `v 2026.11.24-1`, `v 2026.11.19-1 → 11.24-1`, `web`."""
+        self._verzia_lbl.configure(text=text)
 
     # ---------- stav z adaptéra ----------
     def nastav_stav(self, stav: Stav | None):

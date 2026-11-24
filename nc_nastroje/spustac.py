@@ -9,6 +9,7 @@ import webbrowser
 from pathlib import Path
 from urllib.parse import quote
 
+from . import aktualizacie
 from .config import LOCAL_DIR
 from .katalog import App
 
@@ -19,9 +20,13 @@ TMP_DIR = LOCAL_DIR / "tmp"        # dočasné súbory so zoznamom ciest
 TMP_VEK_S = 24 * 3600              # staršie dočasné súbory sa pri ďalšom zápise zmažú
 
 
-def priecinok_aplikacie(app: App, koren_nastrojov: Path) -> Path | None:
-    """Fáza 1: priamo zo zdroja v koreni nástrojov (lokálne kópie prídu vo fáze 4)."""
-    return (Path(koren_nastrojov) / app.zdroj) if app.zdroj else None
+NIE_JE_LOKALNE = "Aplikácia sa ešte nestihla skopírovať z L:\\ – skús o chvíľu"
+
+
+def priecinok_aplikacie(app: App) -> Path | None:
+    """Priečinok aktívnej LOKÁLNEJ verzie (apps/<id>/<verzia> v %LOCALAPPDATA%/NC_Nastroje);
+    z L: sa aplikácie nespúšťajú. None = zatiaľ nie je skopírovaná."""
+    return aktualizacie.priecinok_aktivnej(app.id) if app.zdroj else None
 
 
 def _cesty_do_suboru(cesty: list[str]) -> str:
@@ -39,8 +44,10 @@ def _cesty_do_suboru(cesty: list[str]) -> str:
     return "@" + str(subor)
 
 
-def zostav_prikaz(app: App, koren_nastrojov: Path, cesty: list[str] | None = None) -> list[str]:
-    priecinok = priecinok_aplikacie(app, koren_nastrojov)
+def zostav_prikaz(app: App, cesty: list[str] | None = None) -> list[str]:
+    priecinok = priecinok_aplikacie(app)
+    if priecinok is None:
+        raise FileNotFoundError(NIE_JE_LOKALNE)
     cesta_programu = str(priecinok / app.spustit)
     if app.typ == "python":
         pythonw = Path(sys.executable).with_name("pythonw.exe")
@@ -59,7 +66,7 @@ def zostav_prikaz(app: App, koren_nastrojov: Path, cesty: list[str] | None = Non
     return zaklad + arg
 
 
-def spusti(app: App, koren_nastrojov: Path, cesty: list[str] | None = None) -> tuple[bool, str]:
+def spusti(app: App, cesty: list[str] | None = None) -> tuple[bool, str]:
     """Vráti (ok, správa pre používateľa). Nikdy nevyhodí výnimku."""
     try:
         if app.typ == "web":
@@ -68,12 +75,15 @@ def spusti(app: App, koren_nastrojov: Path, cesty: list[str] | None = None) -> t
                 url = app.url_cesta.format(url=app.url, cesta=quote(cesty[0]))
             webbrowser.open(url)
             return True, ""
-        prikaz = zostav_prikaz(app, koren_nastrojov, cesty)
+        if priecinok_aplikacie(app) is None:
+            log.warning("Aplikácia %s nie je lokálne nainštalovaná", app.id)
+            return False, NIE_JE_LOKALNE
+        prikaz = zostav_prikaz(app, cesty)
         if not Path(prikaz[0]).exists() or (app.typ == "python" and not Path(prikaz[1]).exists()):
             log.error("Súbor aplikácie %s chýba: %s", app.id, prikaz)
             return False, "Nepodarilo sa spustiť – súbor chýba"
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if app.typ == "python" else 0
-        subprocess.Popen(prikaz, cwd=str(priecinok_aplikacie(app, koren_nastrojov)), creationflags=flags)
+        subprocess.Popen(prikaz, cwd=str(priecinok_aplikacie(app)), creationflags=flags)
         log.info("Spustené %s: %s", app.id, prikaz)
         return True, ""
     except Exception as e:  # noqa: BLE001 – UI nesmie spadnúť
@@ -81,8 +91,8 @@ def spusti(app: App, koren_nastrojov: Path, cesty: list[str] | None = None) -> t
         return False, f"Nepodarilo sa spustiť – {e}"
 
 
-def otvor_priecinok(app: App, koren_nastrojov: Path) -> tuple[bool, str]:
-    p = priecinok_aplikacie(app, koren_nastrojov)
+def otvor_priecinok(app: App) -> tuple[bool, str]:
+    p = priecinok_aplikacie(app)
     if not p or not p.exists():
         return False, "Priečinok aplikácie neexistuje"
     try:

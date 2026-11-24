@@ -92,8 +92,19 @@ def main():
                     FIKTIVNA.format(nazov=a["nazov"], verzia=verzia), encoding="utf-8")
         zaznamy.append(a)
     NASTROJE.mkdir(parents=True, exist_ok=True)
+    # poznámky „Čo je nové“ (apps.json ich referuje relatívne ku koreňu nástrojov)
+    (NASTROJE / "nastrojovy_list" / "CO_JE_NOVE.md").write_text(
+        "# Nástrojový list\n\n## 2026.11.24-1\n- Výstup aj do PDF.\n\n## 2026.11.19-1\n- Prvá verzia.\n",
+        encoding="utf-8")
+    # záznam launchera (zo zdrojového kódu sa neaktualizuje, len zo zostaveného exe)
+    launcher_dir = NASTROJE / "launcher" / "2026.11.24-1"
+    launcher_dir.mkdir(parents=True, exist_ok=True)
+    (launcher_dir / "nc_nastroje.exe").write_bytes(b"fiktivny launcher")
+    launcher = {"verzia": "2026.11.24-1", "zdroj": "launcher\\2026.11.24-1", "spustit": "nc_nastroje.exe",
+                "co_je_nove": "launcher\\CO_JE_NOVE.md"}
+    (NASTROJE / "launcher" / "CO_JE_NOVE.md").write_text("# NC Nástroje\n- Fáza 4.\n", encoding="utf-8")
     (NASTROJE / "apps.json").write_text(
-        json.dumps({"verzia_formatu": 1, "aplikacie": zaznamy}, ensure_ascii=False, indent=2),
+        json.dumps({"verzia_formatu": 1, "aplikacie": zaznamy, "launcher": launcher}, ensure_ascii=False, indent=2),
         encoding="utf-8")
     (KOREN / "R").mkdir(exist_ok=True)
     stavove_subory()

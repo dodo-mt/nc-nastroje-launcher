@@ -1,17 +1,17 @@
 """Hlavné okno – zobrazenie A (dlaždice)."""
 import logging
-import queue
-import threading
 import tkinter as tk
+from dataclasses import replace
 from pathlib import Path
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 import sv_ttk
 from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
 
-from .. import dnd, spustac, stavy
+from .. import aktualizacie, dnd, spustac, stavy
 from ..config import LOCAL_DIR, Nastavenia, nacitaj_nastavenia, uloz_nastavenia
-from ..katalog import App, nacitaj_katalog
+from ..katalog import App
+from ..pozadie import Pozadie
 from ..verzia import VERZIA
 from . import napoveda
 from .dlazdica import Dlazdica
@@ -19,7 +19,9 @@ from .nastavenia import OknoNastaveni
 from .tema import FONT, STAVY, SVETLA, Tooltip
 
 log = logging.getLogger(__name__)
-STLPCE_ZUZENE_POD = 1000  # px: pri užšom okne 2 stĺpce
+STLPCE_ZUZENE_POD = 1000          # px: pri užšom okne 2 stĺpce
+KATALOG_INTERVAL_MS = 10 * 60 * 1000   # kontrola nových verzií na L: každých 10 min
+OKRAJ_PRUHU = "#B9D3EE"
 
 
 class HlavneOkno(TkinterDnD.Tk):
@@ -33,11 +35,14 @@ class HlavneOkno(TkinterDnD.Tk):
         self.update_idletasks()  # téma cez <<ThemeChanged>> volá tk_setPalette – musí dobehnúť pred našimi farbami
         self.configure(bg=SVETLA["pozadie"])
         self.dlazdice: dict[str, Dlazdica] = {}
+        self.apps: list[App] = []                  # zobrazené aplikácie (po filtri režimu)
         self._stlpcov = 0
-        self._stavy: dict[str, stavy.Stav] = {}   # posledné prečítané stavy (prežijú prekreslenie dlaždíc)
-        self._fronta: queue.Queue = queue.Queue()  # výsledky z vlákna na pozadí
-        self._obnova_bezi = False
-        self._obnova_znova = False
+        self._pozadie = Pozadie(self)              # sieť a kopírovanie bežia vo vlákne, UI nečaká
+        self._stavy: dict[str, stavy.Stav] = {}    # posledné prečítané stavy (prežijú prekreslenie dlaždíc)
+        self._katalog_zdroj = "ziadny"             # siet | cache | ziadny
+        self._aktual: dict[str, aktualizacie.AppAktualizacia] = {}
+        self._launcher_akt: aktualizacie.LauncherAktualizacia | None = None
+        self._caka: dict[str, str] = {}            # bežiace aplikácie, ktoré použijú novú verziu až pri ďalšom spustení
         self._dnd_cesty: list[str] = []            # ťahané cesty (ak ich systém prezradí už pri vstupe)
         self._dnd_typy: list[str] | None = None    # None = typy zatiaľ neznáme (zistia sa pri pustení)
         self._dnd_aktivne = False
@@ -46,6 +51,7 @@ class HlavneOkno(TkinterDnD.Tk):
         self._postav_menu()
         self._postav_horny_riadok()
         self._pruh_chyb = tk.Label(self, text="", bg="#FDE7E9", fg="#C42B1C", font=(FONT, 10), anchor="w", padx=12, pady=6)
+        self._postav_pruh_aktualizacie()
         self._postav_pruh_dnd()
         self.mriezka = tk.Frame(self, bg=SVETLA["pozadie"])
         self.mriezka.pack(fill="both", expand=True, padx=20, pady=(0, 12))
@@ -53,14 +59,14 @@ class HlavneOkno(TkinterDnD.Tk):
         self.mriezka.bind("<Configure>", lambda e: self._rozloz())
 
         self.bind("<F1>", lambda e: napoveda.ukaz_napovedu(self))
-        self.bind("<F5>", lambda e: self.nacitaj())  # znova načíta katalóg aj stavy
+        self.bind("<F5>", lambda e: self.nacitaj())  # znova načíta katalóg, aktualizácie aj stavy
         self.bind("<Control-f>", lambda e: (self.pole.focus_set(), self.pole.selection_range(0, "end")))
         for i in range(1, 7):
             self.bind(f"<Control-Key-{i}>", lambda e, i=i: self._spusti_podla_poradia(i - 1))
         self._nastav_dnd()
         self.nacitaj()
-        self.after(200, self._skontroluj_frontu)
         self.after(self.nast.interval_stavov_s * 1000, self._casovac_stavov)
+        self.after(KATALOG_INTERVAL_MS, self._casovac_katalogu)
 
     # ---------- stavba UI ----------
     def _postav_menu(self):
@@ -86,6 +92,7 @@ class HlavneOkno(TkinterDnD.Tk):
     def _postav_horny_riadok(self):
         r = tk.Frame(self, bg=SVETLA["pozadie"])
         r.pack(fill="x", padx=20, pady=(16, 12))
+        self._horny_riadok = r
         r.columnconfigure(0, weight=1)
         self.pole = ttk.Entry(r, font=(FONT, 12))
         self.pole.grid(row=0, column=0, sticky="ew", ipady=4, padx=(0, 12))
@@ -98,6 +105,28 @@ class HlavneOkno(TkinterDnD.Tk):
             b = ttk.Button(r, text=text, style=styl, state="disabled")
             b.grid(row=0, column=i + 1, padx=(0, 8) if i < 2 else 0, ipady=4)
             Tooltip(b, tip + " (pripravuje sa vo fáze 6)")
+
+    def _postav_pruh_aktualizacie(self):
+        """Modrý pruh „Na L:\\_Nastroje je nová verzia: … Aktualizuje sa pri ďalšom spustení.“"""
+        bg = SVETLA["pruh"]
+        self._pruh_akt = tk.Frame(self, bg=bg, highlightbackground=OKRAJ_PRUHU, highlightthickness=1)
+        tk.Label(self._pruh_akt, text="↓", font=(FONT, 13, "bold"), bg=bg, fg=SVETLA["akcent"]).pack(
+            side="left", padx=(14, 8), pady=8)
+        self._akt_pre = tk.Label(self._pruh_akt, font=(FONT, 11), bg=bg, fg=SVETLA["text"], padx=0)
+        self._akt_pre.pack(side="left")
+        self._akt_tucne = tk.Label(self._pruh_akt, font=(FONT, 11, "bold"), bg=bg, fg=SVETLA["text"], padx=0)
+        self._akt_tucne.pack(side="left")
+        self._akt_po = tk.Label(self._pruh_akt, font=(FONT, 11), bg=bg, fg=SVETLA["text"], padx=0)
+        self._akt_po.pack(side="left")
+        self._akt_tlacidlo = ttk.Button(self._pruh_akt, text="Aktualizovať teraz", command=self._aktualizuj_teraz)
+        self._akt_tlacidlo.pack(side="right", padx=(10, 12), pady=6)
+        Tooltip(self._akt_tlacidlo, "Skontroluje L:\\_Nastroje a skopíruje nové verzie hneď "
+                                    "(pri novej verzii launchera ho reštartuje)")
+        odkaz = tk.Label(self._pruh_akt, text="Čo je nové", font=(FONT, 11, "underline"), bg=bg,
+                         fg=SVETLA["akcent"], cursor="hand2")
+        odkaz.pack(side="right", padx=(10, 0))
+        odkaz.bind("<Button-1>", lambda e: self._ukaz_co_je_nove_pruhu())
+        Tooltip(odkaz, "Zobrazí, čo je v novej verzii nové")
 
     def _postav_pruh_dnd(self):
         """Horný pruh: počas ťahania „Ťaháš N súborov…“, po zlom pustení krátke upozornenie."""
@@ -121,32 +150,185 @@ class HlavneOkno(TkinterDnD.Tk):
             self._disky[pismeno] = (bodka, text)
         self._rezim = tk.Label(s, bg=SVETLA["pozadie"], fg=SVETLA["text2"], font=(FONT, 9))
         self._rezim.pack(side="left", padx=20, pady=6)
-        tk.Label(s, text=f"Aplikácie z {self.nast.koren_nastrojov} · launcher v {VERZIA}",
-                 bg=SVETLA["pozadie"], fg=SVETLA["text2"], font=(FONT, 9)).pack(side="right", padx=20)
+        self._zdroj_text = tk.Label(s, bg=SVETLA["pozadie"], fg=SVETLA["text2"], font=(FONT, 9))
+        self._zdroj_text.pack(side="right", padx=20)
         self._aktualizuj_rezim()
+        self._aktualizuj_zdroj_text()
 
     def _aktualizuj_rezim(self):
         self._rezim.configure(text="Režim: " + ("Plný" if self.nast.rezim == "plny" else "Na prezeranie"))
 
-    # ---------- katalóg a dlaždice ----------
-    def nacitaj(self):
-        apps, chyby = nacitaj_katalog(Path(self.nast.koren_nastrojov) / "apps.json")
+    def _aktualizuj_zdroj_text(self):
+        if self._katalog_zdroj == "cache":
+            text = f"Aplikácie z lokálnej kópie (L:\\ nedostupný) · launcher v {VERZIA}"
+        else:
+            text = f"Aplikácie z {self.nast.koren_nastrojov} · launcher v {VERZIA}"
+        self._zdroj_text.configure(text=text)
+
+    # ---------- katalóg, aktualizácie a dlaždice ----------
+    def nacitaj(self, sila: bool = False):
+        """Rýchlo zobrazí katalóg z lokálnej cache (bez siete), potom na pozadí načíta čerstvý
+        apps.json z L:, skopíruje nové verzie a prečíta stavy. `sila` = prekresliť dlaždice vždy."""
+        kat = aktualizacie.nacitaj_katalog_s_cache(Path(self.nast.koren_nastrojov), len_cache=True)
+        self._pouzi_katalog(kat, sila=sila)
+        self.obnov_katalog()
+        self.obnov_stavy()
+
+    def _filtruj(self, apps: list[App]) -> list[App]:
         if self.nast.rezim == "prezeranie":
-            apps = [a for a in apps if not a.len_plny_rezim]
-        self.apps = apps
+            return [a for a in apps if not a.len_plny_rezim]
+        return list(apps)
+
+    def _pouzi_katalog(self, kat: aktualizacie.Katalog, sila: bool = False):
+        self._katalog_zdroj = kat.zdroj
+        self._aktualizuj_zdroj_text()
+        self._ukaz_chyby(kat.chyby)
+        if kat.zdroj == "ziadny":
+            return                                # nič nové: ostanú dlaždice, ktoré už sú
+        apps = self._filtruj(kat.apps)
+        if sila or apps != self.apps:
+            self._postav_dlazdice(apps)
+
+    def _ukaz_chyby(self, chyby: list[str]):
         if chyby:
             self._pruh_chyb.configure(text="  " + " | ".join(chyby))
-            self._pruh_chyb.pack(fill="x", padx=20, pady=(0, 12), before=self.mriezka)
+            if not self._pruh_chyb.winfo_ismapped():
+                self._pruh_chyb.pack(fill="x", padx=20, pady=(0, 12), before=self.mriezka)
         else:
             self._pruh_chyb.pack_forget()
+
+    def _postav_dlazdice(self, apps: list[App]):
+        self.apps = apps
         for d in self.dlazdice.values():
             d.destroy()
         self.dlazdice = {a.id: Dlazdica(self.mriezka, a, self.spusti, self._menu_dlazdice) for a in apps}
         self._stlpcov = 0
         self._rozloz()
+        self._prekresli_aktualizacie()          # verzie, stavy (posledné známe) a pruh
+
+    def obnov_katalog(self):
+        """Na pozadí: apps.json z L: (+ cache), kopírovanie nových verzií, kontrola novej verzie launchera."""
+        koren, kontext, caka, rezim = Path(self.nast.koren_nastrojov), self._kontext(), self._caka, self.nast.rezim
+
+        def praca(posli):
+            kat = aktualizacie.nacitaj_katalog_s_cache(koren)
+            posli(("katalog", kat))                           # dlaždice hneď, kopírovanie potom
+            akt, launcher = {}, None
+            if kat.zdroj == "siet":
+                apps = [a for a in kat.apps if not (rezim == "prezeranie" and a.len_plny_rezim)]
+                akt = aktualizacie.aktualizuj_aplikacie(
+                    apps, koren, lambda a: stavy.bezi_aplikacia(a, kontext), caka,
+                    pri_priebehu=lambda id_, s: posli(("app", id_, s)))
+                if aktualizacie.je_zostaveny():
+                    launcher = aktualizacie.aktualizuj_launcher(kat.launcher, koren, VERZIA)
+            return kat, akt, launcher
+
+        self._pozadie.spusti("katalog", praca, self._po_obnove_katalogu, self._pri_priebehu_katalogu)
+
+    def _pri_priebehu_katalogu(self, obj):
+        if obj[0] == "katalog":
+            self._pouzi_katalog(obj[1])
+        elif obj[0] == "app":
+            self._aktual[obj[1]] = obj[2]
+            self._prekresli_aktualizacie()
+
+    def _po_obnove_katalogu(self, vysledok):
+        kat, akt, launcher = vysledok
+        if kat.zdroj == "siet":                    # offline sa ponechá posledný známy stav
+            self._aktual = dict(akt)
+            self._launcher_akt = launcher
+        self._prekresli_aktualizacie()
+        self.obnov_stavy()                         # mohla pribudnúť / ubudnúť aplikácia
+
+    def _casovac_katalogu(self):
+        self.obnov_katalog()
+        self.after(KATALOG_INTERVAL_MS, self._casovac_katalogu)
+
+    def _text_verzie(self, app: App) -> str:
+        """`v 2026.11.24-1`, `v 2026.11.19-1 → 11.24-1`, `v … (staršia)` po návrate späť, `web`."""
+        if app.typ == "web":
+            return "web"
+        dir_app = aktualizacie.APPS_DIR / app.id
+        aktivna = aktualizacie.aktivna_verzia(dir_app)
+        akt = self._aktual.get(app.id)
+        if aktivna is None:
+            return f"v {app.verzia} · " + ("kopíruje sa" if akt and akt.stav == "kopiruje" else "nie je skopírovaná")
+        if akt and akt.stav == "caka" and akt.stara:
+            return f"v {akt.stara} → {aktualizacie.skrat_verziu(akt.stara, aktivna)}"
+        if akt and akt.stav == "kopiruje" and akt.vzdialena != aktivna:
+            return f"v {aktivna} → {aktualizacie.skrat_verziu(aktivna, akt.vzdialena)}"
+        if aktivna != aktualizacie.lokalne_verzie(dir_app)[-1]:
+            return f"v {aktivna} (staršia)"
+        return f"v {aktivna}"
+
+    def _stav_pre(self, id_: str) -> stavy.Stav | None:
+        """Stav z adaptéra, prípadne prekrytý stavom aktualizácie (modrá „Nová verzia“ / „Kopíruje sa…“)."""
+        s, akt = self._stavy.get(id_), self._aktual.get(id_)
+        if akt and akt.stav == "kopiruje" and not akt.lokalna:
+            return stavy.Stav("necinny", "Kopíruje sa…", s.riadky if s else [], s.cipy if s else [])
+        if akt and akt.stav in ("kopiruje", "caka"):
+            if s is None:
+                return stavy.Stav("nova_verzia", "Nová verzia")
+            if s.stav in ("ok", "necinny", "nezname"):
+                return replace(s, stav="nova_verzia", text="Nová verzia")
+        return s
+
+    def _prekresli_aktualizacie(self):
         for id_, d in self.dlazdice.items():
-            d.nastav_stav(self._stavy.get(id_))   # posledné známe stavy hneď, čerstvé prídu z pozadia
-        self.obnov_stavy()
+            d.nastav_verziu(self._text_verzie(d.app))
+            d.nastav_stav(self._stav_pre(id_))
+            akt = self._aktual.get(id_)
+            if akt and akt.stav == "chyba":
+                d.ukaz_chybu(akt.sprava)
+        self._aktualizuj_pruh()
+
+    def _cakajuce_aplikacie(self) -> list[tuple[App, aktualizacie.AppAktualizacia]]:
+        return [(a, self._aktual[a.id]) for a in self.apps
+                if a.id in self._aktual and self._aktual[a.id].stav in ("kopiruje", "caka")]
+
+    def _aktualizuj_pruh(self):
+        la, cakajuce = self._launcher_akt, self._cakajuce_aplikacie()
+        if la and la.stav == "pripraveny":
+            pre, tucne, po = "Je nová verzia NC Nástrojov: ", la.verzia, ". Aktualizácia reštartuje launcher."
+        elif cakajuce:
+            pre = "Na L:\\_Nastroje je nová verzia: " if len(cakajuce) == 1 else "Na L:\\_Nastroje sú nové verzie: "
+            tucne = ", ".join(f"{a.nazov} {s.vzdialena}" for a, s in cakajuce)
+            po = (". Aktualizuje sa pri ďalšom spustení." if any(s.stav == "caka" for _, s in cakajuce)
+                  else ". Kopírujem na tento počítač…")
+        else:
+            self._pruh_akt.pack_forget()
+            return
+        self._akt_pre.configure(text=pre)
+        self._akt_tucne.configure(text=tucne)
+        self._akt_po.configure(text=po)
+        if not self._pruh_akt.winfo_ismapped():
+            self._pruh_akt.pack(fill="x", padx=20, pady=(0, 12), after=self._horny_riadok)
+
+    def _ukaz_co_je_nove_pruhu(self):
+        la, casti = self._launcher_akt, []
+        if la and la.stav == "pripraveny":
+            casti.append(f"NC Nástroje {la.verzia}\n\n{la.co_je_nove or '(bez poznámok)'}")
+        else:
+            for a, s in self._cakajuce_aplikacie():
+                casti.append(f"{a.nazov} {s.vzdialena}\n\n{aktualizacie.precitaj_co_je_nove(a.id) or '(bez poznámok)'}")
+        napoveda.ukaz_text(self, "Čo je nové", "\n\n――――――――――――――――\n\n".join(casti) or "Bez poznámok.")
+
+    def _aktualizuj_teraz(self):
+        la = self._launcher_akt
+        if la and la.stav == "pripraveny":
+            if not messagebox.askyesno("Aktualizácia NC Nástrojov",
+                                       f"Launcher sa ukončí a spustí sa nová verzia {la.verzia}.\n\nPokračovať?",
+                                       parent=self):
+                return
+            try:
+                aktualizacie.spusti_aktualizator(la)
+            except Exception:  # noqa: BLE001 – UI nesmie spadnúť
+                log.exception("Aktualizátor sa nepodarilo spustiť")
+                self._upozorni("Aktualizáciu launchera sa nepodarilo spustiť.")
+                return
+            self.destroy()
+            return
+        self.obnov_katalog()                       # nové verzie aplikácií sa kopírujú hneď, nečakať 10 min
 
     # ---------- stavy aplikácií (na pozadí) ----------
     def _kontext(self) -> stavy.Kontext:
@@ -155,35 +337,8 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def obnov_stavy(self):
         """Spustí čítanie stavov vo vlákne; UI nečaká. Ak už beží, po dobehnutí sa spustí znova."""
-        if self._obnova_bezi:
-            self._obnova_znova = True
-            return
-        self._obnova_bezi = True
         apps, kontext = list(self.apps), self._kontext()
-
-        def praca():
-            try:
-                vysledok = stavy.obnov_vsetko(apps, kontext)
-            except Exception:  # noqa: BLE001
-                log.exception("Obnova stavov zlyhala")
-                vysledok = None
-            self._fronta.put(vysledok)
-        threading.Thread(target=praca, daemon=True, name="obnova-stavov").start()
-
-    def _skontroluj_frontu(self):
-        """Volá sa v hlavnom vlákne: prevezme výsledky z pozadia (bez `after` z cudzieho vlákna)."""
-        try:
-            while True:
-                vysledok = self._fronta.get_nowait()
-                self._obnova_bezi = False
-                if vysledok is not None:
-                    self._pouzi_stavy(vysledok)
-                if self._obnova_znova:
-                    self._obnova_znova = False
-                    self.obnov_stavy()
-        except queue.Empty:
-            pass
-        self.after(200, self._skontroluj_frontu)
+        self._pozadie.spusti("stavy", lambda posli: stavy.obnov_vsetko(apps, kontext), self._pouzi_stavy)
 
     def _casovac_stavov(self):
         self.obnov_stavy()
@@ -193,8 +348,8 @@ class HlavneOkno(TkinterDnD.Tk):
         self._stavy.update(v.stavy)
         for id_, d in self.dlazdice.items():
             if id_ in v.stavy:
-                d.nastav_stav(v.stavy[id_])
-        for pismeno, ok, koren in (("L", v.l_ok, self.nast.koren_l), ("R", v.r_ok, self.nast.koren_r)):
+                d.nastav_stav(self._stav_pre(id_))
+        for pismeno, ok in (("L", v.l_ok), ("R", v.r_ok)):
             bodka, text = self._disky[pismeno]
             bodka.configure(fg=STAVY["ok" if ok else "chyba"][0])
             text.configure(text=pismeno + ":\\ " + ("pripojený" if ok else "nedostupný"))
@@ -250,7 +405,10 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def _dlazdica_pod(self, x: int, y: int) -> Dlazdica | None:
         for d in self.dlazdice.values():
-            if d.winfo_ismapped() and d.winfo_rootx() <= x < d.winfo_rootx() + d.winfo_width()                     and d.winfo_rooty() <= y < d.winfo_rooty() + d.winfo_height():
+            if not d.winfo_ismapped():
+                continue
+            if d.winfo_rootx() <= x < d.winfo_rootx() + d.winfo_width() \
+                    and d.winfo_rooty() <= y < d.winfo_rooty() + d.winfo_height():
                 return d
         return None
 
@@ -322,7 +480,7 @@ class HlavneOkno(TkinterDnD.Tk):
 
     # ---------- akcie ----------
     def spusti(self, app: App, cesty: list[str] | None = None):
-        ok, sprava = spustac.spusti(app, Path(self.nast.koren_nastrojov), cesty)
+        ok, sprava = spustac.spusti(app, cesty)
         self.dlazdice[app.id].ukaz_chybu("" if ok else sprava)
 
     def _spusti_podla_poradia(self, i: int):
@@ -335,13 +493,52 @@ class HlavneOkno(TkinterDnD.Tk):
         if app.typ != "web":
             m.add_command(label="Otvoriť priečinok aplikácie", command=lambda: self._otvor_priecinok(app))
         m.add_separator()
-        m.add_command(label="Čo je nové (fáza 4)", state="disabled")
-        m.add_command(label="Návrat na predchádzajúcu verziu (fáza 4)", state="disabled")
+        co = aktualizacie.precitaj_co_je_nove(app.id) if app.typ != "web" else None
+        m.add_command(label="Čo je nové", state="normal" if co else "disabled",
+                      command=lambda: napoveda.ukaz_text(self, f"Čo je nové – {app.nazov}", co))
+        self._pridaj_navrat(m, app)
         m.add_command(label="Vytvoriť zástupcu na ploche (fáza 5)", state="disabled")
         m.tk_popup(event.x_root, event.y_root)
 
+    def _pridaj_navrat(self, m: tk.Menu, app: App):
+        nazov = "Návrat na predchádzajúcu verziu"
+        if app.typ == "web":
+            m.add_command(label=nazov, state="disabled")
+            return
+        dir_app = aktualizacie.APPS_DIR / app.id
+        lokalne = aktualizacie.lokalne_verzie(dir_app)
+        if aktualizacie.pripnuta_verzia(dir_app) and lokalne:
+            m.add_command(label=f"Použiť najnovšiu verziu (v {lokalne[-1]})",
+                          command=lambda: self._zmen_verziu(app, None))
+            return
+        predch = aktualizacie.predchadzajuca_verzia(dir_app)
+        if predch:
+            m.add_command(label=f"{nazov} (v {predch})", command=lambda: self._zmen_verziu(app, predch))
+        else:
+            m.add_command(label=nazov, state="disabled")
+
+    def _zmen_verziu(self, app: App, verzia: str | None):
+        """Návrat na predchádzajúcu lokálnu verziu (alebo späť na najnovšiu). Použije sa pri ďalšom spustení."""
+        dir_app = aktualizacie.APPS_DIR / app.id
+        try:
+            if verzia:
+                if not messagebox.askyesno(
+                        "Návrat na predchádzajúcu verziu",
+                        f"{app.nazov} sa bude spúšťať vo verzii {verzia}.\n\nBežiacu aplikáciu to nezmení – "
+                        f"použije sa pri ďalšom spustení. Novšia verzia sa vráti, až keď bude na L:\\_Nastroje "
+                        f"ešte novšia, alebo cez „Použiť najnovšiu verziu“.\n\nPokračovať?", parent=self):
+                    return
+                aktualizacie.pripni(dir_app, verzia)
+            else:
+                aktualizacie.odpni(dir_app)
+        except (OSError, ValueError) as e:
+            log.exception("Zmena verzie %s zlyhala", app.id)
+            self.dlazdice[app.id].ukaz_chybu(f"Zmena verzie zlyhala: {e}")
+            return
+        self._prekresli_aktualizacie()
+
     def _otvor_priecinok(self, app: App):
-        ok, sprava = spustac.otvor_priecinok(app, Path(self.nast.koren_nastrojov))
+        ok, sprava = spustac.otvor_priecinok(app)
         if not ok:
             self.dlazdice[app.id].ukaz_chybu(sprava)
 
@@ -349,7 +546,10 @@ class HlavneOkno(TkinterDnD.Tk):
         OknoNastaveni(self, self.nast, self._pri_ulozeni_nastaveni)
 
     def _pri_ulozeni_nastaveni(self, nast: Nastavenia):
+        zmena_korena = nast.koren_nastrojov != self.nast.koren_nastrojov
         self.nast = nast
         uloz_nastavenia(nast)
         self._aktualizuj_rezim()
-        self.nacitaj()
+        if zmena_korena:                          # stavy a aktualizácie z iného koreňa neplatia
+            self._stavy, self._aktual, self._launcher_akt, self._caka = {}, {}, None, {}
+        self.nacitaj(sila=True)

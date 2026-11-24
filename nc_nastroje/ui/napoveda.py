@@ -37,6 +37,11 @@ def _okno(rodic, titul, text, mono=False):
     centruj(o, rodic)
 
 
+def ukaz_text(rodic, titul, text):
+    """Okno s textom (napr. Čo je nové aplikácie), v strede hlavného okna."""
+    _okno(rodic, titul, text)
+
+
 def ukaz_napovedu(rodic):
     _okno(rodic, "Nápoveda", NAPOVEDA)
 
