@@ -2,6 +2,8 @@
 import logging
 import os
 import queue
+import sys
+import threading
 import tkinter as tk
 from dataclasses import replace
 from datetime import datetime, timedelta
@@ -37,11 +39,21 @@ PLACEHOLDER = "Číslo zákazky / výkresu  ·  Enter = otvoriť na L:"
 INDEX_PAUZA_PO_CHYBE = timedelta(minutes=10)   # neúspešný index sa nepokúša znova každých 30 s
 
 
+def zaisti_koniec_procesu(po_s: float = 8.0) -> None:
+    """Zostavený exe: ak sa proces po zatvorení okna do `po_s` sekúnd neukončí sám (visí vlákno na sieti, zlyhá
+    destroy…), ukončí sa natvrdo. Aktualizácia launchera tak vždy uvoľní miesto novej verzii."""
+    if getattr(sys, "frozen", False):
+        casovac = threading.Timer(po_s, lambda: (logging.shutdown(), os._exit(0)))
+        casovac.daemon = True
+        casovac.start()
+
+
 class HlavneOkno(TkinterDnD.Tk):
     def __init__(self, prikaz: dict | None = None, instancia=None, s_tray: bool = True):
         """`prikaz` = príkaz z príkazového riadka ({"akcia": zobraz|tray|aplikacia|cesty, …}),
         `instancia` = server jednej inštancie (príkazy od druhých spustení), `s_tray` = spustiť tray ikonu."""
         super().__init__()
+        self.report_callback_exception = self._zaloguj_vynimku   # v okne bez konzoly by sa chyba inak stratila
         self.withdraw()                           # okno sa ukáže až na konci (a len ak to príkaz chce)
         self._prikaz = prikaz or {"akcia": "zobraz"}
         self._instancia = instancia
@@ -611,6 +623,8 @@ class HlavneOkno(TkinterDnD.Tk):
                 log.exception("Aktualizátor sa nepodarilo spustiť")
                 self._upozorni("Aktualizáciu launchera sa nepodarilo spustiť.")
                 return
+            log.info("Aktualizácia: zatváram launcher (pid %s)", os.getpid())
+            zaisti_koniec_procesu()
             self.destroy()
             return
         self.obnov_katalog()                       # nové verzie aplikácií sa kopírujú hneď, nečakať 10 min
@@ -832,7 +846,12 @@ class HlavneOkno(TkinterDnD.Tk):
             self._tray.upozorni("NC Nástroje bežia ďalej v oblasti oznámení. Okno otvoríš dvojklikom na ikonu, "
                                 "ukončiť ich môžeš cez pravé tlačidlo → Ukončiť.")
 
+    @staticmethod
+    def _zaloguj_vynimku(typ, hodnota, spatne):
+        log.error("Neošetrená chyba v okne", exc_info=(typ, hodnota, spatne))
+
     def ukonci(self):
+        zaisti_koniec_procesu()
         self.destroy()
 
     def destroy(self):
@@ -1041,7 +1060,7 @@ class HlavneOkno(TkinterDnD.Tk):
         if self.nast.rezim != "plny":
             return
         if not self._disky_ok.get("L"):
-            self._upozorni("L:\ nie je dostupný – nasadenie sa teraz nedá spraviť.")
+            self._upozorni("L:\\ nie je dostupný – nasadenie sa teraz nedá spraviť.")
             return
         OknoNasadenia(self, Path(self.nast.koren_nastrojov), self._pozadie, self.obnov_katalog)
 

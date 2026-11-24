@@ -328,9 +328,11 @@ def zostav_aktualizator(pid: int, adresar: Path, spustit: str, verzia: str, laun
     """Text `aktualizator.bat`: počká na ukončenie launchera (PID), zapíše `aktualna.txt` a spustí novú verziu."""
     launcher_dir = Path(launcher_dir or LAUNCHER_DIR)
     exe = Path(adresar) / spustit
+    trasa = LOCAL_DIR / "log" / "aktualizator.log"           # stopa behu aktualizátora (okno nemá konzolu)
     return "\r\n".join([
         "@echo off",
         "chcp 65001 >nul",
+        f'echo %date% %time% aktualizator caka na PID {pid} >> "{trasa}"',
         "set /a pokusov=0",
         ":cakaj",
         f'tasklist /FI "PID eq {pid}" /NH 2>nul | find "{pid}" >nul',
@@ -340,8 +342,10 @@ def zostav_aktualizator(pid: int, adresar: Path, spustit: str, verzia: str, laun
         "timeout /t 1 /nobreak >nul",
         "goto cakaj",
         ":prepni",
+        f'echo %date% %time% prepinam na {verzia} (pokusov %pokusov%) >> "{trasa}"',
         f'> "{launcher_dir / "aktualna.txt"}" echo {verzia}',
         f'start "" /D "{adresar}" "{exe}"',
+        f'echo %date% %time% nova verzia spustena >> "{trasa}"',
         "",
     ])
 

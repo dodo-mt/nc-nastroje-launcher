@@ -1,5 +1,10 @@
 # Čo je nové
 
+## 2026.11.24-14
+- Aktualizácia launchera: po „Aktualizovať teraz“ a pri Ukončiť sa proces najneskôr po 8 s ukončí natvrdo, aby
+  nová verzia nikdy nenarazila na bežiacu starú. Priebeh aktualizátora sa zapisuje do `log\aktualizator.log`.
+- Neošetrené chyby okna sa zapisujú do `launcher.log` (okno nemá konzolu, predtým sa strácali).
+
 ## 2026.11.24-13
 - Hľadať v Lupe: Lupa zatiaľ text z príkazového riadku neprijíma, preto sa hľadaný text skopíruje do schránky
   (v Lupe ho vložíš cez Ctrl+V). Keď Lupa dostane `--hladat`, stačí v apps.json doplniť `argumenty_hladat`.
