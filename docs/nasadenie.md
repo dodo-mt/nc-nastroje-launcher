@@ -76,6 +76,6 @@ launcher (ikona v oblasti oznámení → Ukončiť). Lokálne dáta (`%LOCALAPPD
 
 ## Aplikácia spúšťaná priamo z L: (Lupa)
 
-Lupa má vlastný spúšťač `L:\_Lupa\Lupa.exe`, ktorý sa kopíruje do počítača sám. V apps.json má preto `typ: exe`,
+Lupa má vlastný spúšťač `L:\_Nastroje\lupa\Lupa.exe`, ktorý sa kopíruje do počítača sám. V apps.json má preto `typ: exe`,
 `spustit` = plná cesta a **žiadny `zdroj`** – launcher ju nekopíruje, len spustí. Záznam pridá
 `python nastroje/pridaj_lupu.py` (záloha apps.json.bak). Nasadzuje sa mimo launchera (`build.py` v repozitári Lupy).

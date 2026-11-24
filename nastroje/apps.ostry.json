@@ -103,14 +103,14 @@
       "nazov": "Lupa",
       "popis": "Prehliadač zákaziek na L:\\",
       "typ": "exe",
-      "spustit": "L:\\_Lupa\\Lupa.exe",
+      "spustit": "L:\\_Nastroje\\lupa\\Lupa.exe",
       "ikona": "lupa.png",
       "farba": "#C4244B",
       "tlacidlo": "Otvoriť",
       "prijima": [],
       "stav": {
         "adapter": "lupa_sken",
-        "cesta": "_Lupa"
+        "cesta": "_Nastroje\\lupa"
       }
     },
     {

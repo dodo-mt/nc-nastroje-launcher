@@ -1,6 +1,6 @@
-r"""Pridá (alebo opraví) záznam Lupy v apps.json na L:\_Nastroje – Lupa sa spúšťa priamo z L:\_Lupa\Lupa.exe.
+r"""Pridá (alebo opraví) záznam Lupy v apps.json na L:\_Nastroje – Lupa sa spúšťa priamo z L:\_Nastroje\lupa\Lupa.exe.
 
-    python nastroje/pridaj_lupu.py [--koren L:\_Nastroje] [--exe L:\_Lupa\Lupa.exe]
+    python nastroje/pridaj_lupu.py [--koren L:\_Nastroje] [--exe L:\_Nastroje\lupa\Lupa.exe]
 
 Pred zápisom urobí zálohu apps.json.bak, zapíše atomicky a bez BOM. Iné záznamy nemení."""
 import argparse
@@ -12,7 +12,7 @@ from pathlib import Path
 
 ZAZNAM = {"id": "lupa", "nazov": "Lupa", "popis": "Prehliadač zákaziek na L:\\", "typ": "exe",
           "ikona": "lupa.png", "farba": "#C4244B", "tlacidlo": "Otvoriť", "prijima": [],
-          "stav": {"adapter": "lupa_sken", "cesta": "_Lupa"}}
+          "stav": {"adapter": "lupa_sken", "cesta": "_Nastroje\\lupa"}}
 
 
 def pridaj_lupu(koren: Path, exe: str) -> str:
@@ -38,7 +38,7 @@ def pridaj_lupu(koren: Path, exe: str) -> str:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--koren", default=r"L:\_Nastroje")
-    ap.add_argument("--exe", default=r"L:\_Lupa\Lupa.exe")
+    ap.add_argument("--exe", default=r"L:\_Nastroje\lupa\Lupa.exe")
     a = ap.parse_args()
     if not Path(a.exe).is_file():
         print(f"CHYBA: {a.exe} neexistuje", file=sys.stderr)
