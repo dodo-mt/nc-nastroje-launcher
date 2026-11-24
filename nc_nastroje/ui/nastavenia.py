@@ -8,6 +8,9 @@ from ..katalog import App
 from .tema import FONT, PALETA, Tooltip, centruj, farby_zoznamu
 
 
+SIRKA, VYSKA = 800, 540          # pevná veľkosť okna nastavení
+
+
 class OknoNastaveni(tk.Toplevel):
     def __init__(self, rodic, nast: Nastavenia, pri_ulozeni, apps: list[App] | None = None):
         super().__init__(rodic)
@@ -16,7 +19,8 @@ class OknoNastaveni(tk.Toplevel):
         self.resizable(False, False)
         self._pri_ulozeni = pri_ulozeni
         self._nast = nast
-        self._apps = [a for a in (apps or []) if a.prijima]   # „Odoslať do“ má zmysel len pri aplikáciách s `prijima`
+        self._vsetky = list(apps or [])                        # aplikácie dostupné v tomto režime (pre „Aplikácie“)
+        self._apps = [a for a in self._vsetky if a.prijima]   # „Odoslať do“ má zmysel len pri aplikáciách s `prijima`
         self._v = {
             "koren_nastrojov": tk.StringVar(value=nast.koren_nastrojov),
             "koren_l": tk.StringVar(value=nast.koren_l),
@@ -27,17 +31,21 @@ class OknoNastaveni(tk.Toplevel):
         self._po_prihlaseni = tk.BooleanVar(value=nast.spustit_po_prihlaseni)
         self._app_pri_starte = tk.BooleanVar(value=nast.spustat_aplikacie_pri_starte)
         self._odoslat = {a.id: tk.BooleanVar(value=a.id in nast.odoslat_do) for a in self._apps}
+        self._zobrazene = {a.id: tk.BooleanVar(value=a.id not in nast.skryte_aplikacie) for a in self._vsetky}
 
         telo = ttk.Frame(self, padding=16)
         telo.pack(fill="both", expand=True)
-        self._sekcie = tk.Listbox(telo, exportselection=False, height=4, width=16, font=(FONT, 10), activestyle="none",
+        telo.columnconfigure(1, weight=1)
+        telo.rowconfigure(0, weight=1)
+        self._sekcie = tk.Listbox(telo, exportselection=False, height=5, width=16, font=(FONT, 10), activestyle="none",
                                   **farby_zoznamu())
         self._sekcie.grid(row=0, column=0, sticky="ns", padx=(0, 16))
-        for s in ("Cesty", "Režim", "Stavy", "Windows"):
+        for s in ("Cesty", "Režim", "Aplikácie", "Stavy", "Windows"):
             self._sekcie.insert("end", s)
         self._obsah = ttk.Frame(telo)
         self._obsah.grid(row=0, column=1, sticky="nsew")
         self._strany = {"Cesty": self._cesty(self._obsah), "Režim": self._rezim(self._obsah),
+                        "Aplikácie": self._aplikacie(self._obsah),
                         "Stavy": self._stavy(self._obsah), "Windows": self._windows(self._obsah)}
         self._sekcie.bind("<<ListboxSelect>>", lambda e: self._ukaz())
         self._sekcie.selection_set(0)
@@ -52,7 +60,8 @@ class OknoNastaveni(tk.Toplevel):
         Tooltip(ulozit, "Uloží nastavenia a znovu načíta aplikácie")
         Tooltip(zrusit, "Zavrie okno bez uloženia")
         self.bind("<Escape>", lambda e: self.destroy())
-        centruj(self, rodic)
+        self.geometry(f"{SIRKA}x{VYSKA}")           # pevná veľkosť – okno sa pri prepínaní sekcií nemení
+        centruj(self, rodic, (SIRKA, VYSKA))
         self.grab_set()
 
     def _ukaz(self):
@@ -61,7 +70,7 @@ class OknoNastaveni(tk.Toplevel):
             return
         for s in self._strany.values():
             s.grid_forget()
-        self._strany[self._sekcie.get(sel[0])].grid(row=0, column=0, sticky="nsew")
+        self._strany[self._sekcie.get(sel[0])].grid(row=0, column=0, sticky="nw")
 
     def _cesty(self, rodic):
         f = ttk.Frame(rodic)
@@ -82,6 +91,24 @@ class OknoNastaveni(tk.Toplevel):
         ttk.Radiobutton(f, text="Plný – všetky aplikácie", value="plny", variable=self._v["rezim"]).grid(sticky="w", pady=6)
         ttk.Radiobutton(f, text="Na prezeranie – skryje aplikácie len pre programátora",
                         value="prezeranie", variable=self._v["rezim"]).grid(sticky="w", pady=6)
+        return f
+
+    def _aplikacie(self, rodic):
+        f = ttk.Frame(rodic)
+        ttk.Label(f, text="Ktoré aplikácie sa majú na tomto počítači zobraziť.\n"
+                          "Skryté sa nekopírujú, nespúšťajú a nemajú dlaždicu ani položku v oblasti oznámení.",
+                  foreground=PALETA["text2"], justify="left").grid(row=0, column=0, sticky="w", pady=(0, 10))
+        ram = ttk.LabelFrame(f, text="Zobrazené aplikácie (platí len na tomto počítači)", padding=10)
+        ram.grid(row=1, column=0, sticky="ew")
+        if self._vsetky:
+            for i, a in enumerate(self._vsetky):
+                c = ttk.Checkbutton(ram, text=a.nazov, variable=self._zobrazene[a.id])
+                c.grid(row=i, column=0, sticky="w", pady=2)
+                Tooltip(c, f"Zobraziť {a.nazov} v launcheri")
+        else:
+            ttk.Label(ram, text="Katalóg aplikácií ešte nie je načítaný.", foreground=PALETA["text2"]).grid()
+        ttk.Label(f, text="Aplikácie len pre programátora sa v režime Na prezeranie nezobrazujú vôbec.",
+                  foreground=PALETA["text2"]).grid(row=2, column=0, sticky="w", pady=(10, 0))
         return f
 
     def _stavy(self, rodic):
@@ -124,8 +151,13 @@ class OknoNastaveni(tk.Toplevel):
         ostatne = [i for i in self._nast.odoslat_do if i not in self._odoslat]
         return ostatne + [i for i, v in self._odoslat.items() if v.get()]
 
+    def _skryte_vyber(self) -> list[str]:
+        """Odškrtnuté aplikácie + tie, ktoré sa tu nezobrazujú (v tomto režime nedostupné), ostanú, ako boli."""
+        ostatne = [i for i in self._nast.skryte_aplikacie if i not in self._zobrazene]
+        return ostatne + [i for i, v in self._zobrazene.items() if not v.get()]
+
     def _uloz(self):
-        nast = replace(self._nast, **{k: v.get().strip() for k, v in self._v.items()},
+        nast = replace(self._nast, skryte_aplikacie=self._skryte_vyber(), **{k: v.get().strip() for k, v in self._v.items()},
                        interval_stavov_s=self._interval.get().strip(),
                        spustit_po_prihlaseni=bool(self._po_prihlaseni.get()),
                        spustat_aplikacie_pri_starte=bool(self._app_pri_starte.get()),

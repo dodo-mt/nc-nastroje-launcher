@@ -1,5 +1,10 @@
 # Čo je nové
 
+## 2026.11.24-18
+- Nastavenia → Aplikácie: na každom počítači si môžeš zvoliť, ktoré aplikácie sa zobrazia (skryté sa nekopírujú
+  a nespúšťajú). Platí popri režime Na prezeranie.
+- Okno Nastavenia má pevnú (väčšiu) veľkosť, pri prepínaní sekcií sa už nemení.
+
 ## 2026.11.24-17
 - Nové poradie dlaždíc (Programový list Hypermill, Nástrojový list, Programový list Edgecam / NC Editor, Triedič NC, Lupa /
   TNC Sync) a nová ikona Programového listu Hypermill (ozubené koleso).

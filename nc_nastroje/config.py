@@ -37,6 +37,7 @@ class Nastavenia:
     spustit_po_prihlaseni: bool = False        # zástupca v shell:startup (`--tray`)
     spustat_aplikacie_pri_starte: bool = True  # spustiť aplikácie s `spustit_pri_starte` z apps.json
     odoslat_do: list = field(default_factory=list)   # id aplikácií, ktoré majú zástupcu v „Odoslať do“
+    skryte_aplikacie: list = field(default_factory=list)   # id aplikácií, ktoré si používateľ na tomto PC skryl
     port_instancie: int = 47653                # lokálny port pre jednu inštanciu launchera (127.0.0.1)
     tray_oznamenie_ukazane: bool = False       # oznámenie „beží v oblasti oznámení“ sa ukáže len raz
 
@@ -54,6 +55,9 @@ class Nastavenia:
         if not isinstance(self.odoslat_do, list):
             self.odoslat_do = []
         self.odoslat_do = [str(x) for x in self.odoslat_do]
+        if not isinstance(self.skryte_aplikacie, list):
+            self.skryte_aplikacie = []
+        self.skryte_aplikacie = [str(x) for x in self.skryte_aplikacie]
         if not self.koren_nastrojov:
             self.koren_nastrojov = _predvoleny_koren(r"L\_Nastroje", r"L:\_Nastroje")
         if not self.koren_l:

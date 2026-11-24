@@ -458,7 +458,7 @@ class HlavneOkno(TkinterDnD.Tk):
         napoveda.ukaz_napovedu(self)
 
     def _filtruj(self, apps: list[App]) -> list[App]:
-        return filtruj_rezim(apps, self.nast.rezim)
+        return filtruj_rezim(apps, self.nast.rezim, self.nast.skryte_aplikacie)
 
     def _pouzi_katalog(self, kat: aktualizacie.Katalog, sila: bool = False):
         self._katalog_zdroj = kat.zdroj
@@ -497,13 +497,14 @@ class HlavneOkno(TkinterDnD.Tk):
     def obnov_katalog(self):
         """Na pozadí: apps.json z L: (+ cache), kopírovanie nových verzií, kontrola novej verzie launchera."""
         koren, kontext, caka, rezim = Path(self.nast.koren_nastrojov), self._kontext(), self._caka, self.nast.rezim
+        skryte = list(self.nast.skryte_aplikacie)
 
         def praca(posli):
             kat = aktualizacie.nacitaj_katalog_s_cache(koren)
             posli(("katalog", kat))                           # dlaždice hneď, kopírovanie potom
             akt, launcher = {}, None
             if kat.zdroj == "siet":
-                apps = filtruj_rezim(kat.apps, rezim)
+                apps = filtruj_rezim(kat.apps, rezim, skryte)
                 akt = aktualizacie.aktualizuj_aplikacie(
                     apps, koren, lambda a: stavy.bezi_aplikacia(a, kontext), caka,
                     pri_priebehu=lambda id_, s: posli(("app", id_, s)))
@@ -1065,7 +1066,7 @@ class HlavneOkno(TkinterDnD.Tk):
         OknoNasadenia(self, Path(self.nast.koren_nastrojov), self._pozadie, self.obnov_katalog)
 
     def otvor_nastavenia(self):
-        OknoNastaveni(self, self.nast, self._pri_ulozeni_nastaveni, self._filtruj(self._katalog_apps))
+        OknoNastaveni(self, self.nast, self._pri_ulozeni_nastaveni, filtruj_rezim(self._katalog_apps, self.nast.rezim))
 
     def _pri_ulozeni_nastaveni(self, nast: Nastavenia):
         zmena_korena = nast.koren_nastrojov != self.nast.koren_nastrojov

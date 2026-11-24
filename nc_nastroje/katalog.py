@@ -106,11 +106,13 @@ def nacitaj_katalog_z_textu(text: str) -> tuple[list[App], list[str]]:
 REZIMY = ("plny", "prezeranie")
 
 
-def filtruj_rezim(apps: list[App], rezim: str) -> list[App]:
-    """Režim „Na prezeranie“ skryje aplikácie s `len_plny_rezim` (napr. Triedič NC); Plný ukáže všetko."""
+def filtruj_rezim(apps: list[App], rezim: str, skryte=()) -> list[App]:
+    """Režim „Na prezeranie“ skryje aplikácie s `len_plny_rezim` (napr. Triedič NC); Plný ukáže všetko.
+    `skryte` = id aplikácií, ktoré si používateľ skryl v Nastaveniach (platí v oboch režimoch)."""
+    skryte = set(skryte or ())
     if rezim == "prezeranie":
-        return [a for a in apps if not a.len_plny_rezim]
-    return list(apps)
+        apps = [a for a in apps if not a.len_plny_rezim]
+    return [a for a in apps if a.id not in skryte]
 
 
 def nacitaj_katalog(cesta: Path) -> tuple[list[App], list[str]]:

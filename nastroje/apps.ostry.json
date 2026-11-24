@@ -145,7 +145,8 @@
       "prijima": [],
       "stav": {
         "adapter": "tnc_sync"
-      }
+      },
+      "len_plny_rezim": true
     }
   ],
   "launcher": {

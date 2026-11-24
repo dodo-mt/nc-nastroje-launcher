@@ -141,17 +141,17 @@ def kontrast(a: str, b: str) -> float:
     return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
 
 
-def centruj(okno: tk.Misc, rodic: tk.Misc) -> None:
-    """Umiestni dialóg do stredu hlavného okna."""
+def centruj(okno: tk.Misc, rodic: tk.Misc, velkost: tuple[int, int] | None = None) -> None:
+    """Umiestni dialóg do stredu hlavného okna (`velkost` = pevná veľkosť okna, inak podľa obsahu)."""
     okno.update_idletasks()
-    w, h = okno.winfo_reqwidth(), okno.winfo_reqheight()
+    w, h = velkost or (okno.winfo_reqwidth(), okno.winfo_reqheight())
     if rodic.winfo_viewable():
         x = rodic.winfo_rootx() + (rodic.winfo_width() - w) // 2
         y = rodic.winfo_rooty() + (rodic.winfo_height() - h) // 2
     else:                                      # hlavné okno je skryté v tray – do stredu obrazovky
         x = (okno.winfo_screenwidth() - w) // 2
         y = (okno.winfo_screenheight() - h) // 3
-    okno.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+    okno.geometry((f"{w}x{h}" if velkost else "") + f"+{max(x, 0)}+{max(y, 0)}")
 
 
 class Tooltip:
