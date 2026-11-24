@@ -56,3 +56,20 @@ def rozbal_argumenty(argv):
 ```
 
 Pri bežnom počte súborov sa cesty odovzdávajú priamo ako argumenty (bez `@`).
+
+## Lupa: hľadaný text z príkazového riadku (`--hladat`)
+
+Tlačidlo „Hľadať v Lupe“ a pole zákazky dnes Lupu len otvoria (text sa skopíruje do schránky). Aby sa hľadanie vykonalo
+samo, Lupa (`NC Lupa/app.py`) má pri štarte prečítať argument:
+
+```
+Lupa.exe --hladat "21930-1A"
+```
+
+Spúšťač `Lupa.exe` (`launcher.py`) už odovzdáva `sys.argv[1:]` ďalej, takže stačí `app.py`: ak je v `sys.argv` hodnota
+za `--hladat`, po načítaní okna ju vložiť do vyhľadávacieho poľa a hľadanie spustiť. Ak Lupa už beží, stačí, aby sa
+nová inštancia správne zachovala podľa toho, ako to Lupa rieši dnes.
+
+Keď to Lupa vie, v `L:\_Nastroje\apps.json` sa pri `lupa` doplní len:
+`"argumenty_hladat": "--hladat {text}"` – launcher potom text odovzdá priamo (schránka sa už nepoužije).
+Rovnako sa dá neskôr dopísať `--cesta <priečinok>` a `prijima: ["priecinok"]` pre ťahanie priečinka na dlaždicu.

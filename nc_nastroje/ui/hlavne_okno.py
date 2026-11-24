@@ -260,8 +260,13 @@ class HlavneOkno(TkinterDnD.Tk):
         ok, sprava = spustac.spusti_hladaj(app, text)
         if not ok:
             self._upozorni(sprava)
-        elif app.typ != "web":
-            self._upozorni("Lupa sa otvorila – hľadaný text zadaj priamo v nej.")
+        elif app.typ != "web" and not app.argumenty_hladat:
+            if text.strip():                      # Lupa text z príkazového riadku neprijíma – ide aspoň do schránky
+                self.clipboard_clear()
+                self.clipboard_append(text.strip())
+                self._upozorni(f"Lupa sa otvorila – „{text.strip()}“ je v schránke, vlož ho cez Ctrl+V.")
+            else:
+                self._upozorni("Lupa sa otvorila.")
 
     def obnov_index(self, sila: bool = False):
         """Obnoví index zákaziek na pozadí (raz denne, alebo hneď z menu). L: sa len číta."""

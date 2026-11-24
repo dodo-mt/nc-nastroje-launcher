@@ -110,7 +110,14 @@ def spusti_hladaj(app: App, text: str) -> tuple[bool, str]:
     otvorí len tak. Vráti (ok, správa). Nikdy nevyhodí výnimku."""
     try:
         if app.typ != "web" and app.priamo:
-            return spusti(app)           # exe Lupa hľadaný text neprijíma – otvorí sa len aplikácia
+            if not app.argumenty_hladat:
+                return spusti(app)       # aplikácia hľadaný text neprijíma – otvorí sa len aplikácia
+            prikaz = [str(Path(app.spustit))] + [t.replace("{text}", text) for t in app.argumenty_hladat.split()]
+            if not Path(prikaz[0]).exists():
+                return False, "Nepodarilo sa spustiť – súbor chýba"
+            subprocess.Popen(prikaz, cwd=str(priecinok_aplikacie(app)))
+            log.info("Hľadanie v %s: %s", app.id, prikaz)
+            return True, ""
         if app.typ != "web" or not app.url:
             return False, "Aplikácia nevie hľadať (nie je webová)"
         url = app.url_hladat.format(url=app.url, text=quote(text)) if app.url_hladat else app.url

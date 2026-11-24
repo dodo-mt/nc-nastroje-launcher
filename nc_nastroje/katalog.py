@@ -33,6 +33,7 @@ class App:
     tlacidlo: str = "Spustiť"   # text hlavného tlačidla (Spustiť / Otvoriť)
     log: str = ""               # cesta k logu aplikácie (premenné prostredia sa rozbalia, relatívna ku koreňu nástrojov)
     pozastavit: bool = False    # dlaždica má tlačidlo Pozastaviť (Triedič NC)
+    argumenty_hladat: str = ""  # exe aplikácia vie hľadať: šablóna argumentov, napr. "--hladat {text}" (Lupa)
 
     @property
     def priamo(self) -> bool:

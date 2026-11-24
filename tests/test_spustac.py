@@ -90,3 +90,13 @@ def test_priamo_spustana_aplikacia_sa_nekopiruje(tmp_path):
     assert spustac.zostav_prikaz(app, ["C:/x"])[0] == str(exe)
     ok, sprava = spustac.spusti(app)                                      # súbor neexistuje
     assert not ok and "chýba" in sprava
+
+
+def test_hladanie_v_exe_aplikacii_s_argumentmi(tmp_path, monkeypatch):
+    exe = tmp_path / "Lupa.exe"
+    exe.write_bytes(b"x")
+    app = App(id="lupa", nazov="Lupa", typ="exe", spustit=str(exe), argumenty_hladat="--hladat {text}")
+    volane = []
+    monkeypatch.setattr(spustac.subprocess, "Popen", lambda prikaz, **kw: volane.append(prikaz))
+    assert spustac.spusti_hladaj(app, "21930-1A mala") == (True, "")
+    assert volane == [[str(exe), "--hladat", "21930-1A mala"]]               # text ostane jedným argumentom

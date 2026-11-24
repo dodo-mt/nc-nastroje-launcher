@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.24-13
+- Hľadať v Lupe: Lupa zatiaľ text z príkazového riadku neprijíma, preto sa hľadaný text skopíruje do schránky
+  (v Lupe ho vložíš cez Ctrl+V). Keď Lupa dostane `--hladat`, stačí v apps.json doplniť `argumenty_hladat`.
+
 ## 2026.11.24-12
 - Oprava aktualizácie launchera: po zatvorení okna proces vždy skončí. Predtým ho mohlo zdržať vlákno na pozadí a po
   „Aktualizovať teraz“ ostala bežať stará verzia, takže sa nová nespustila.
