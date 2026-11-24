@@ -17,7 +17,13 @@
         ".xlsx",
         "priecinok"
       ],
-      "argumenty": "{cesty}"
+      "argumenty": "{cesty}",
+      "stav": {
+        "adapter": "subor_json",
+        "cesta": "_stav\\programovy_list",
+        "max_vek_min": 10080
+      },
+      "log": "_stav\\programovy_list"
     },
     {
       "id": "nastrojovy_list",
@@ -36,7 +42,8 @@
       "argumenty": "{cesty}",
       "stav": {
         "adapter": "subor_json",
-        "cesta": "_stav\\nastrojovy_list"
+        "cesta": "_stav\\nastrojovy_list",
+        "max_vek_min": 10080
       },
       "log": "_stav\\nastrojovy_list",
       "co_je_nove": "nastrojovy_list\\CO_JE_NOVE.md"
@@ -55,7 +62,13 @@
         ".h",
         "priecinok"
       ],
-      "argumenty": "{cesty}"
+      "argumenty": "{cesty}",
+      "stav": {
+        "adapter": "subor_json",
+        "cesta": "_stav\\cnc_vykres_edgecam",
+        "max_vek_min": 10080
+      },
+      "log": "_stav\\cnc_vykres_edgecam"
     },
     {
       "id": "nc_editor",
@@ -74,7 +87,13 @@
         ".spf",
         ".nc"
       ],
-      "argumenty": "{cesty}"
+      "argumenty": "{cesty}",
+      "stav": {
+        "adapter": "subor_json",
+        "cesta": "_stav\\nc_editor",
+        "max_vek_min": 10080
+      },
+      "log": "_stav\\nc_editor"
     },
     {
       "id": "triedic_nc",
