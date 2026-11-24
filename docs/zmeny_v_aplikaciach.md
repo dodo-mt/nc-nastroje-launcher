@@ -18,3 +18,24 @@ Ak má aplikácia ukazovať stav na dlaždici (napr. Nástrojový list), po behu
 - Viac počítačov = viac súborov; launcher ukáže najhorší stav a detaily z najnovšieho.
 
 TNC Sync a Lupa už stavový súbor zapisujú (`_tnc_sync_stav.json`, `lupa_scan.json`) – tam netreba nič meniť.
+
+## Zoznam ciest v súbore `@subor.txt` – všetky aplikácie s `prijima`
+
+Keď launcher dostane veľa súborov (príkazový riadok by presiahol ~30 000 znakov), zapíše cesty do
+dočasného súboru (`%LOCALAPPDATA%\NC_Nastroje\tmp\cesty_<id>.txt`, UTF-8, jedna cesta na riadok)
+a aplikácii odovzdá jediný argument `@<cesta k súboru>`.
+
+Aplikácia, ktorá prijíma súbory (`sys.argv`), má argument začínajúci `@` rozbaliť:
+
+```python
+def rozbal_argumenty(argv):
+    cesty = []
+    for a in argv:
+        if a.startswith("@"):
+            cesty += [r for r in open(a[1:], encoding="utf-8").read().splitlines() if r]
+        else:
+            cesty.append(a)
+    return cesty
+```
+
+Pri bežnom počte súborov sa cesty odovzdávajú priamo ako argumenty (bez `@`).

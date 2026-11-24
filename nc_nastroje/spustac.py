@@ -3,18 +3,40 @@ import logging
 import os
 import subprocess
 import sys
+import time
+import uuid
 import webbrowser
 from pathlib import Path
 from urllib.parse import quote
 
+from .config import LOCAL_DIR
 from .katalog import App
 
 log = logging.getLogger(__name__)
+
+MAX_CESTY_ZNAKOV = 30_000          # dlhšie cesty sa odovzdajú ako @subor.txt (limit príkazového riadka ~32 767)
+TMP_DIR = LOCAL_DIR / "tmp"        # dočasné súbory so zoznamom ciest
+TMP_VEK_S = 24 * 3600              # staršie dočasné súbory sa pri ďalšom zápise zmažú
 
 
 def priecinok_aplikacie(app: App, koren_nastrojov: Path) -> Path | None:
     """Fáza 1: priamo zo zdroja v koreni nástrojov (lokálne kópie prídu vo fáze 4)."""
     return (Path(koren_nastrojov) / app.zdroj) if app.zdroj else None
+
+
+def _cesty_do_suboru(cesty: list[str]) -> str:
+    """Zapíše cesty (jedna na riadok, UTF-8) do dočasného súboru a vráti `@cesta`.
+    Aplikácia to musí podporovať (viď docs/zmeny_v_aplikaciach.md). Maže len v LOCAL_DIR/tmp (v %LOCALAPPDATA%/NC_Nastroje)."""
+    TMP_DIR.mkdir(parents=True, exist_ok=True)
+    for stary in TMP_DIR.glob("cesty_*.txt"):
+        try:
+            if time.time() - stary.stat().st_mtime > TMP_VEK_S:
+                stary.unlink()
+        except OSError:
+            pass
+    subor = TMP_DIR / f"cesty_{uuid.uuid4().hex[:10]}.txt"
+    subor.write_text("\n".join(cesty) + "\n", encoding="utf-8")
+    return "@" + str(subor)
 
 
 def zostav_prikaz(app: App, koren_nastrojov: Path, cesty: list[str] | None = None) -> list[str]:
@@ -28,7 +50,10 @@ def zostav_prikaz(app: App, koren_nastrojov: Path, cesty: list[str] | None = Non
     arg = []
     for token in (app.argumenty or "").split():
         if token == "{cesty}":
-            arg.extend(cesty or [])
+            if cesty and len(subprocess.list2cmdline(cesty)) > MAX_CESTY_ZNAKOV:
+                arg.append(_cesty_do_suboru(cesty))
+            else:
+                arg.extend(cesty or [])
         else:
             arg.append(token)
     return zaklad + arg

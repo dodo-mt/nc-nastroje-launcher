@@ -11,6 +11,10 @@ NAPOVEDA = """NC Nástroje – spúšťač firemných aplikácií
 Dvojklik na dlaždicu alebo tlačidlo = spustiť aplikáciu.
 Pravé tlačidlo na dlaždici = ďalšie akcie.
 
+Ťahanie súborov: pretiahni súbory alebo priečinky z Prieskumníka do okna.
+Aplikácie, ktoré ich prijímajú, sa zvýraznia (ostatné zosivejú). Pusti ich na zvýraznenú
+dlaždicu – aplikácia sa spustí s týmito súbormi. Esc = zrušiť ťahanie.
+
 Klávesy:
   F1        Nápoveda
   F5        Obnoviť
