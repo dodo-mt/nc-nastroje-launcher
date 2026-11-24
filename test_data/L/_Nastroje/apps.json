@@ -1,0 +1,122 @@
+{
+  "verzia_formatu": 1,
+  "aplikacie": [
+    {
+      "id": "tnc_sync",
+      "nazov": "TNC Sync",
+      "popis": "Záloha programov zo strojov",
+      "verzia": "2026.11.20-1",
+      "ikona": "tnc_sync.png",
+      "farba": "#005FB8",
+      "prijima": [
+        "priecinok"
+      ],
+      "stav": {
+        "adapter": "tnc_sync"
+      },
+      "typ": "python",
+      "zdroj": "tnc_sync\\2026.11.20-1",
+      "spustit": "fiktivna_app.py",
+      "argumenty": "{cesty}"
+    },
+    {
+      "id": "triedic_nc",
+      "nazov": "Triedič NC",
+      "popis": "Rozdelenie programov podľa stroja",
+      "verzia": "2026.11.19-2",
+      "ikona": "triedic_nc.png",
+      "farba": "#7B3FBF",
+      "prijima": [
+        ".h",
+        ".mpf"
+      ],
+      "len_plny_rezim": true,
+      "tlacidlo": "Otvoriť",
+      "pozastavit": true,
+      "stav": {
+        "adapter": "proces"
+      },
+      "typ": "python",
+      "zdroj": "triedic_nc\\2026.11.19-2",
+      "spustit": "fiktivna_app.py",
+      "argumenty": "{cesty}"
+    },
+    {
+      "id": "lupa",
+      "nazov": "Lupa",
+      "popis": "Prehliadač zákaziek na L:\\",
+      "typ": "web",
+      "url": "file:///L:/_Lupa/index.html",
+      "url_hladat": "{url}?q={text}",
+      "url_cesta": "{url}?cesta={cesta}",
+      "ikona": "lupa.png",
+      "farba": "#C25A00",
+      "prijima": [
+        "priecinok",
+        "*"
+      ],
+      "tlacidlo": "Otvoriť",
+      "stav": {
+        "adapter": "lupa_sken"
+      }
+    },
+    {
+      "id": "nastrojovy_list",
+      "nazov": "Nástrojový list",
+      "popis": "Z .pof súborov hyperMILL",
+      "verzia": "2026.11.24-1",
+      "ikona": "nastrojovy_list.png",
+      "farba": "#0B7A55",
+      "prijima": [
+        ".pof",
+        "priecinok"
+      ],
+      "stav": {
+        "adapter": "subor_json",
+        "cesta": "_stav\\nastrojovy_list"
+      },
+      "co_je_nove": "nastrojovy_list\\CO_JE_NOVE.md",
+      "typ": "python",
+      "zdroj": "nastrojovy_list\\2026.11.24-1",
+      "spustit": "fiktivna_app.py",
+      "argumenty": "{cesty}"
+    },
+    {
+      "id": "programovy_list",
+      "nazov": "Programový list",
+      "popis": "Nákresy upnutia → Excel + PDF",
+      "verzia": "2026.11.20-1",
+      "ikona": "programovy_list.png",
+      "farba": "#C4244B",
+      "prijima": [
+        ".png",
+        ".jpg",
+        ".xlsx",
+        "priecinok"
+      ],
+      "typ": "python",
+      "zdroj": "programovy_list\\2026.11.20-1",
+      "spustit": "fiktivna_app.py",
+      "argumenty": "{cesty}"
+    },
+    {
+      "id": "nc_editor",
+      "nazov": "NC Editor",
+      "popis": "Úprava a porovnanie programov",
+      "verzia": "2026.11.22-1",
+      "ikona": "nc_editor.png",
+      "farba": "#555555",
+      "prijima": [
+        ".h",
+        ".i",
+        ".mpf",
+        ".spf",
+        ".nc"
+      ],
+      "typ": "python",
+      "zdroj": "nc_editor\\2026.11.22-1",
+      "spustit": "fiktivna_app.py",
+      "argumenty": "{cesty}"
+    }
+  ]
+}

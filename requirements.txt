@@ -1,0 +1,7 @@
+sv-ttk
+tkinterdnd2
+pystray
+Pillow
+psutil
+pywin32
+pytest
