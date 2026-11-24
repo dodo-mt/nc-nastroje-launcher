@@ -84,8 +84,27 @@ def build_launchera(build):
 def test_publikuje_launcher(koren, build_launchera):
     v = publikuj.publikuj(koren, "launcher", build_launchera, "2026.11.24-3")
     assert apps_json(koren)["launcher"] == {"verzia": "2026.11.24-3", "zdroj": "launcher\\2026.11.24-3",
-                                            "spustit": "nc_nastroje.exe"}
+                                            "spustit": "nc_nastroje.exe", "co_je_nove": "launcher\\CO_JE_NOVE.md"}
     assert (v["cielovy"] / "nc_nastroje.exe").exists()
+    assert (koren / "launcher" / "CO_JE_NOVE.md").read_text() == "# nové"
+
+
+def test_poznamky_zo_suboru_a_zapis_co_je_nove(koren, build, tmp_path):
+    (build / "CO_JE_NOVE.md").unlink()                       # build bez poznámok
+    publikuj.publikuj(koren, "nl", build, "2026.11.24-1")
+    assert "co_je_nove" not in apps_json(koren)["aplikacie"][0] and not (koren / "nl" / "CO_JE_NOVE.md").exists()
+    p = tmp_path / "poznamky.md"
+    p.write_text("# nové z parametra", encoding="utf-8")
+    publikuj.publikuj(koren, "nl", build, "2026.11.24-2", poznamky=p)
+    assert (koren / "nl" / "CO_JE_NOVE.md").read_text(encoding="utf-8") == "# nové z parametra"
+    assert apps_json(koren)["aplikacie"][0]["co_je_nove"] == "nl\\CO_JE_NOVE.md"
+
+
+def test_chybajuci_subor_poznamok_sa_odmietne(koren, build, tmp_path):
+    pred = (koren / "apps.json").read_text(encoding="utf-8")
+    with pytest.raises(publikuj.PublikaciaChyba, match="poznámkami"):
+        publikuj.publikuj(koren, "nl", build, "2026.11.24-1", poznamky=tmp_path / "nie_je.md")
+    assert (koren / "apps.json").read_text(encoding="utf-8") == pred
 
 
 def test_launcher_berie_verziu_z_verzia_txt(koren, build_launchera):

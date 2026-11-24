@@ -37,6 +37,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("build", help="priečinok s hotovým buildom")
     ap.add_argument("--verzia", help="RRRR.MM.DD-poradie (predvolene dnešná, ďalšie poradie)")
     ap.add_argument("--koren", help="koreň nástrojov (predvolene z nastavení)")
+    ap.add_argument("--poznamky", help="súbor .md s textom „Čo je nové“ k tejto verzii (inak CO_JE_NOVE.md z buildu)")
     ap.add_argument("--ano", action="store_true", help="nepýtať sa na potvrdenie pri skutočnom koreni")
     a = ap.parse_args(argv)
 
@@ -52,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
             print("Zrušené.")
             return 1
     try:
-        v = publikuj(koren, a.app_id, Path(a.build), a.verzia)
+        v = publikuj(koren, a.app_id, Path(a.build), a.verzia, poznamky=Path(a.poznamky) if a.poznamky else None)
     except PublikaciaChyba as e:
         print(f"CHYBA: {e}", file=sys.stderr)
         return 1

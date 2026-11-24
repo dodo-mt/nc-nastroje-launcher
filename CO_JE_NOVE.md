@@ -1,5 +1,12 @@
 # Čo je nové
 
+## 2026.11.24-21
+- Oprava: čierne menu v tmavom režime (Súbor, Zobraziť, Nápoveda) sa neotváralo – Tk vyžaduje, aby menu patrilo priamo
+  tlačidlu. Stavový riadok dole sa pri nižšom okne v tmavom režime stratil (čierny pás menu zabral miesto) – teraz sa mu
+  miesto rezervuje ako prvému.
+- Oprava: poznámky „Čo je nové“ sa pri publikovaní verzie dostanú na L: (doteraz chýbali, pruh o novej verzii ukazoval
+  „bez poznámok“). Publikovanie samo zapíše `co_je_nove` do apps.json; nový parameter `publikuj.py --poznamky súbor.md`.
+
 ## 2026.11.24-20
 - Verzia aplikácie je v názve okna aj samostatne vpravo dole v stavovom riadku.
 - Titulok okna a pás menu sú čierne (vlastný pás menu namiesto natívneho).

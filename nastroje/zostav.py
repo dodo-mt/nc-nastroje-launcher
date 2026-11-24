@@ -59,6 +59,7 @@ def zostav(vystup: Path) -> Path:
     if not exe.is_file():
         raise SystemExit(f"Zostavenie zlyhalo: {exe} neexistuje")
     (ciel / "verzia.txt").write_text(VERZIA + "\n", encoding="utf-8")
+    shutil.copyfile(PROJEKT / "CO_JE_NOVE.md", ciel / "CO_JE_NOVE.md")      # publikuj.py ho dá na L: pre „Čo je nové“
     subory = [p for p in ciel.rglob("*") if p.is_file()]
     velkost = sum(p.stat().st_size for p in subory) / 1e6
     print(f"Hotovo: {ciel} ({len(subory)} súborov, {velkost:.0f} MB, verzia {VERZIA})")

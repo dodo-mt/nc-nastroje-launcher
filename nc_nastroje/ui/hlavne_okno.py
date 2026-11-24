@@ -139,19 +139,39 @@ class HlavneOkno(TkinterDnD.Tk):
 
     # ---------- stavba UI ----------
     def _postav_menu(self):
+        """Dve sady rovnakých menu nad spoločnými premennými: natívne (svetlý režim, deti `m`) a vlastný čierny pás
+        (tmavý režim, každé menu je dieťaťom svojho tlačidla – inak ho Tk na Windows neotvorí)."""
+        self._v_zobrazenie = tk.StringVar(value=self._zobrazenie)
+        self._v_tmava = tk.BooleanVar(value=self.nast.tmavy_rezim)
+        self._subor_menus = []
         m = tk.Menu(self)
-        subor = tk.Menu(m, tearoff=0)
+        podmenu = [tk.Menu(m, tearoff=0) for _ in range(3)]
+        for nazov, menu in zip(("Súbor", "Zobraziť", "Nápoveda"), podmenu):
+            m.add_cascade(label=nazov, menu=menu)
+        self._napln_menu(*podmenu)
+        self._menu_nativne = m
+        pas = tk.Frame(self, bg="#000000")
+        self._menu_pas = pas
+        vlastne = []
+        for nazov in ("Súbor", "Zobraziť", "Nápoveda"):
+            mb = tk.Menubutton(pas, text=nazov, bg="#000000", fg="#FFFFFF", activebackground="#333333",
+                               activeforeground="#FFFFFF", relief="flat", borderwidth=0, padx=12, pady=5,
+                               font=(FONT, 10))
+            mb.pack(side="left")
+            menu = tk.Menu(mb, tearoff=0)
+            mb.configure(menu=menu)
+            vlastne.append(menu)
+        self._napln_menu(*vlastne)
+        self._vzhlad_hore()
+
+    def _napln_menu(self, subor, zobr, nap):
         subor.add_command(label="Nastavenia…", command=self.otvor_nastavenia)
         subor.add_command(label="Obnoviť stavy a aplikácie", accelerator="F5", command=self.obnov_rucne)
         subor.add_command(label="Obnoviť index zákaziek", command=lambda: self.obnov_index(sila=True))
         subor.add_command(label="Nasadiť aplikáciu…", command=self.otvor_nasadenie)
-        self._subor_menu = subor
         subor.add_separator()
         subor.add_command(label="Ukončiť", command=self.ukonci)
-        m.add_cascade(label="Súbor", menu=subor)
-        zobr = tk.Menu(m, tearoff=0)
-        self._v_zobrazenie = tk.StringVar(value=self._zobrazenie)
-        self._v_tmava = tk.BooleanVar(value=self.nast.tmavy_rezim)
+        self._subor_menus.append(subor)
         zobr.add_radiobutton(label="Dlaždice", value="A", variable=self._v_zobrazenie,
                              command=lambda: self.prepni_zobrazenie("A"))
         zobr.add_radiobutton(label="Zoznam + detail", value="B", variable=self._v_zobrazenie,
@@ -159,21 +179,9 @@ class HlavneOkno(TkinterDnD.Tk):
         zobr.add_separator()
         zobr.add_checkbutton(label="Tmavý režim", variable=self._v_tmava,
                              command=lambda: self.prepni_temu(self._v_tmava.get()))
-        m.add_cascade(label="Zobraziť", menu=zobr)
-        nap = tk.Menu(m, tearoff=0)
         nap.add_command(label="Nápoveda", accelerator="F1", command=lambda: napoveda.ukaz_napovedu(self))
         nap.add_command(label="Čo je nové", command=lambda: napoveda.ukaz_co_je_nove(self))
         nap.add_command(label="O programe", command=lambda: napoveda.ukaz_o_programe(self))
-        m.add_cascade(label="Nápoveda", menu=nap)
-        # tmavý režim: vlastný čierny pás menu (natívne menu Windows sa zafarbiť nedá); svetlý režim: natívne menu
-        self._menu_nativne = m
-        pas = tk.Frame(self, bg="#000000")
-        self._menu_pas = pas
-        for nazov, podmenu in (("Súbor", subor), ("Zobraziť", zobr), ("Nápoveda", nap)):
-            tk.Menubutton(pas, text=nazov, menu=podmenu, bg="#000000", fg="#FFFFFF", activebackground="#333333",
-                          activeforeground="#FFFFFF", relief="flat", borderwidth=0, padx=12, pady=5,
-                          font=(FONT, 10)).pack(side="left")
-        self._vzhlad_hore()
 
     def _vzhlad_hore(self):
         """Tmavý režim: čierny titulok a čierny pás menu; svetlý: predvolený titulok a natívne menu."""
@@ -376,7 +384,7 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def _postav_stavovy_riadok(self):
         s = tk.Frame(self, bg=PALETA["pozadie"], highlightbackground=PALETA["okraj"], highlightthickness=1)
-        s.pack(side="bottom", fill="x")
+        s.pack(side="bottom", fill="x", before=self._obsah)     # pred obsahom, inak ho pri nižšom okne obsah vytlačí
         self._disky = {}
         for pismeno in ("L", "R"):
             bodka = tk.Label(s, text="●", bg=PALETA["pozadie"], fg=STAVY["nezname"][0], font=(FONT, 9))
@@ -395,8 +403,7 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def _aktualizuj_rezim(self):
         self._rezim.configure(text="Režim: " + ("Plný" if self.nast.rezim == "plny" else "Na prezeranie"))
-        menu = getattr(self, "_subor_menu", None)
-        if menu is not None:                               # publikovanie je len v plnom režime
+        for menu in getattr(self, "_subor_menus", []):     # publikovanie je len v plnom režime
             menu.entryconfigure("Nasadiť aplikáciu…", state="normal" if self.nast.rezim == "plny" else "disabled")
 
     def _aktualizuj_zdroj_text(self):

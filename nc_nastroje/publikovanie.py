@@ -104,10 +104,13 @@ def _zaznam(data: dict, app_id: str) -> dict:
     raise PublikaciaChyba(f"Aplikácia '{app_id}' nie je v apps.json – najprv pridaj jej záznam.")
 
 
-def publikuj(koren: Path, app_id: str, build: Path, verzia: str | None = None, dnes: date | None = None) -> dict:
+def publikuj(koren: Path, app_id: str, build: Path, verzia: str | None = None, dnes: date | None = None,
+             poznamky: Path | None = None) -> dict:
     """Vráti {'app_id', 'verzia', 'cielovy', 'subory', 'bajty'}. Pri chybe vyhodí PublikaciaChyba
-    a apps.json ostane nezmenený."""
+    a apps.json ostane nezmenený. `poznamky` = súbor s textom „Čo je nové“ (inak CO_JE_NOVE.md z buildu, ak v ňom je)."""
     koren, build = Path(koren), Path(build)
+    if poznamky and not Path(poznamky).is_file():              # skôr, než sa začne čokoľvek kopírovať
+        raise PublikaciaChyba(f"Súbor s poznámkami neexistuje: {poznamky}")
     apps_json = koren / "apps.json"
     data = _nacitaj_apps(apps_json)
     zaznam = _zaznam(data, app_id)
@@ -156,9 +159,10 @@ def publikuj(koren: Path, app_id: str, build: Path, verzia: str | None = None, d
         shutil.rmtree(tmp, ignore_errors=True)
         raise
 
-    poznamky = build / "CO_JE_NOVE.md"        # poznámky k verzii pre „Čo je nové“ (v koreni aplikácie)
-    if poznamky.is_file():
-        shutil.copyfile(poznamky, app_dir / "CO_JE_NOVE.md")
+    zdroj_poznamok = Path(poznamky) if poznamky else build / "CO_JE_NOVE.md"   # poznámky k verzii pre „Čo je nové“
+    if zdroj_poznamok.is_file():
+        shutil.copyfile(zdroj_poznamok, app_dir / "CO_JE_NOVE.md")
+        zaznam["co_je_nove"] = f"{app_id}\\CO_JE_NOVE.md"        # aby ho launcher vedel nájsť (Čo je nové v pruhu a menu)
 
     # až teraz sa o novej verzii dozvedia klienti: záloha + atomický zápis apps.json
     zaznam["verzia"] = verzia
