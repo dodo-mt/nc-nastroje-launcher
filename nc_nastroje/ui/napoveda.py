@@ -28,7 +28,7 @@ Klávesy:
   F1        Nápoveda
   F5        Obnoviť
   Ctrl+F    Pole zákazky
-  Ctrl+1…6  Spustiť aplikáciu podľa poradia
+  Ctrl+1…9  Spustiť aplikáciu podľa poradia
 """
 
 

@@ -24,8 +24,9 @@ Komunikácia, texty v UI, komentáre a commit správy: **po slovensky**.
 | `triedic_nc` | Triedič NC | tray exe | Triedi programy z hyperMILL z `NC\` do podpriečinkov podľa stroja, kópia na R: |
 | `lupa` | Lupa | web (prehliadač) | Prehliadač zákaziek na L:\ |
 | `nastrojovy_list` | Nástrojový list | tkinter exe | Nástrojové listy z .pof súborov hyperMILL (HTML/PDF) |
-| `programovy_list` | Programový list | skript/exe | Nákresy upnutia (p1a, p1b, p2a…) do Excel šablóny + PDF |
+| `programovy_list` | Programový list Hypermill | skript/exe | Nákresy upnutia (p1a, p1b, p2a…) do Excel šablóny + PDF |
 | `nc_editor` | NC Editor | exe | Úprava a porovnanie NC programov |
+| `cnc_vykres_edgecam` | Programový list Edgecam | exe | Výkres upnutia (screenshoty) z NC programu `.h` → Excel + PDF (`CncVykresGenerator.exe`) |
 
 Launcher **nemení kód týchto aplikácií**. Ak je pre funkciu potrebná zmena v aplikácii
 (napr. čítanie `sys.argv`, zápis stavového súboru), napíš ju ako samostatný návrh
@@ -143,7 +144,7 @@ Pravidlá:
 Predvolené pravidlá `prijima` (návrh, finálne v apps.json):
 - Nástrojový list: `.pof`, `priecinok` (zákazka / pozícia / POF).
 - NC Editor: `.h`, `.i`, `.mpf`, `.spf`, `.nc` (2 súbory = porovnanie – rieši editor).
-- Programový list: `.png`, `.jpg`, `.xlsx`, `priecinok`.
+- Programový list Hypermill: `.png`, `.jpg`, `.xlsx`, `priecinok`.
 - Triedič NC: `.h`, `.mpf`.
 - TNC Sync: `priecinok` (otvorí Prehľad lokálnych programov zákazky).
 - Lupa: `priecinok`, `*`.
@@ -249,7 +250,7 @@ Podľa návrhu (odkaz hore). Hlavné body:
 - Stavový riadok: L:\ a R:\ pripojený/nedostupný, režim, verzia launchera.
 - Menu: Súbor (Nastavenia, Ukončiť), Zobraziť (Dlaždice / Zoznam, Tmavý režim),
   Nápoveda (F1 Nápoveda, Čo je nové, O programe).
-- Klávesy: F1 nápoveda, F5 obnoviť stavy, Ctrl+F pole zákazky, Ctrl+1…6 spustiť aplikáciu.
+- Klávesy: F1 nápoveda, F5 obnoviť stavy, Ctrl+F pole zákazky, Ctrl+1…9 spustiť aplikáciu.
 - Tooltipy na všetkých tlačidlách.
 - Všetky dialógy otvárať v strede hlavného okna.
 - Farby (svetlý režim): pozadie #F3F3F3, karty #FFFFFF, okraj #E0E3E7, text #1B1B1B,

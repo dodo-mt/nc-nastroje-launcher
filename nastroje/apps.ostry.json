@@ -65,14 +65,14 @@
     },
     {
       "id": "programovy_list",
-      "nazov": "Programový list",
+      "nazov": "Programový list Hypermill",
       "popis": "Nákresy upnutia → Excel + PDF",
       "typ": "exe",
       "verzia": "",
       "zdroj": "",
       "spustit": "programovy_list.exe",
       "ikona": "programovy_list.png",
-      "farba": "#C4244B",
+      "farba": "#E07B00",
       "prijima": [
         ".png",
         ".jpg",
@@ -101,13 +101,29 @@
       "argumenty": "{cesty}"
     },
     {
+      "id": "cnc_vykres_edgecam",
+      "nazov": "Programový list Edgecam",
+      "popis": "Výkres upnutia z NC programu → Excel + PDF",
+      "typ": "exe",
+      "verzia": "",
+      "zdroj": "",
+      "spustit": "CncVykresGenerator.exe",
+      "ikona": "cnc_vykres_edgecam.png",
+      "farba": "#4A962D",
+      "prijima": [
+        ".h",
+        "priecinok"
+      ],
+      "argumenty": "{cesty}"
+    },
+    {
       "id": "lupa",
       "nazov": "Lupa",
       "popis": "Prehliadač zákaziek na L:\\",
       "typ": "exe",
       "spustit": "L:\\_Lupa\\Lupa.exe",
       "ikona": "lupa.png",
-      "farba": "#C25A00",
+      "farba": "#C4244B",
       "tlacidlo": "Otvoriť",
       "prijima": [],
       "stav": {

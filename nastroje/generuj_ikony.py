@@ -47,15 +47,22 @@ def obrazok(d, c, w):
     d.line((140, 450, 270, 360, 340, 410, 420, 330, 500, 420), fill=c, width=w - 8, joint="curve")
 
 
+def zameriavac(d, c, w):
+    d.rounded_rectangle((130, 130, 510, 510), radius=30, outline=c, width=w - 12)
+    d.ellipse((240, 240, 400, 400), outline=c, width=w - 8)
+    for x1, y1, x2, y2 in ((320, 170, 320, 230), (320, 410, 320, 470), (170, 320, 230, 320), (410, 320, 470, 320)):
+        d.line((x1, y1, x2, y2), fill=c, width=w - 12)
+
+
 def kod(d, c, w):
     d.line((250, 190, 130, 320, 250, 450), fill=c, width=w, joint="curve")
     d.line((390, 190, 510, 320, 390, 450), fill=c, width=w, joint="curve")
 
 
 IKONY = {
-    "tnc_sync": ("#005FB8", sync), "triedic_nc": ("#7B3FBF", filtr), "lupa": ("#C25A00", lupa),
-    "nastrojovy_list": ("#0B7A55", dokument), "programovy_list": ("#C4244B", obrazok),
-    "nc_editor": ("#555555", kod),
+    "tnc_sync": ("#005FB8", sync), "triedic_nc": ("#7B3FBF", filtr), "lupa": ("#C4244B", lupa),
+    "nastrojovy_list": ("#0B7A55", dokument), "programovy_list": ("#E07B00", obrazok),
+    "nc_editor": ("#555555", kod), "cnc_vykres_edgecam": ("#4A962D", zameriavac),
 }
 
 

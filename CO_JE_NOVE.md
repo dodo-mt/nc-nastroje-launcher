@@ -1,5 +1,15 @@
 # Čo je nové
 
+## 2026.11.24-16
+- Oprava automatickej aktualizácie launchera: pomocný aktualizátor sa spúšťal bez konzoly, v ktorej sa príkaz
+  `tasklist | find` zasekol, takže čakanie na ukončenie launchera nikdy neskončilo a verzia sa neprepla. Teraz beží
+  so skrytou konzolou.
+- Premenovanie: Programový list → Programový list Hypermill (oranžová), CNC výkresy Edgecam → Programový list Edgecam (zelená). Lupa má novú farbu (červená).
+
+## 2026.11.24-15
+- Nová aplikácia Programový list Edgecam (`CncVykresGenerator.exe`, zelená): prijíma `.h` programy a priečinky.
+- Klávesy Ctrl+1…9 spustia aplikáciu podľa poradia.
+
 ## 2026.11.24-14
 - Aktualizácia launchera: po „Aktualizovať teraz“ a pri Ukončiť sa proces najneskôr po 8 s ukončí natvrdo, aby
   nová verzia nikdy nenarazila na bežiacu starú. Priebeh aktualizátora sa zapisuje do `log\aktualizator.log`.

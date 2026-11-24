@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 ZAZNAM = {"id": "lupa", "nazov": "Lupa", "popis": "Prehliadač zákaziek na L:\\", "typ": "exe",
-          "ikona": "lupa.png", "farba": "#C25A00", "tlacidlo": "Otvoriť", "prijima": [],
+          "ikona": "lupa.png", "farba": "#C4244B", "tlacidlo": "Otvoriť", "prijima": [],
           "stav": {"adapter": "lupa_sken", "cesta": "_Lupa"}}
 
 

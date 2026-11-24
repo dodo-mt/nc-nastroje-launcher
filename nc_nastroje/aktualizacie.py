@@ -356,7 +356,9 @@ def spusti_aktualizator(aktualizacia: LauncherAktualizacia, pid: int | None = No
     LOCAL_DIR.mkdir(parents=True, exist_ok=True)
     bat.write_text(zostav_aktualizator(pid or os.getpid(), aktualizacia.adresar, aktualizacia.spustit,
                                        aktualizacia.verzia), encoding="utf-8", newline="")
-    flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    # POZOR: nie DETACHED_PROCESS – cmd bez konzoly sa zasekne na `tasklist | find` (pokus čaká donekonečna a verzia
+    # sa nikdy neprepne). CREATE_NO_WINDOW dá skrytú konzolu; nová skupina procesov ho oddelí od ukončenia launchera.
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     subprocess.Popen(["cmd", "/c", str(bat)], creationflags=flags, close_fds=True)
     log.info("Spustený aktualizátor na verziu %s", aktualizacia.verzia)
     return bat

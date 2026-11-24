@@ -116,7 +116,7 @@ class HlavneOkno(TkinterDnD.Tk):
         self.bind("<F1>", lambda e: napoveda.ukaz_napovedu(self))
         self.bind("<F5>", lambda e: self.nacitaj())  # znova načíta katalóg, aktualizácie aj stavy
         self.bind("<Control-f>", lambda e: self.aktivne_pole().fokus())
-        for i in range(1, 7):
+        for i in range(1, 10):
             self.bind(f"<Control-Key-{i}>", lambda e, i=i: self._spusti_podla_poradia(i - 1))
         self._nastav_dnd()
         self.protocol("WM_DELETE_WINDOW", self.skry_do_tray)   # X = skryť do tray, ukončiť sa dá z menu / tray
