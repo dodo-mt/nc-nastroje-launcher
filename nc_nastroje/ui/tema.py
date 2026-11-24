@@ -141,6 +141,24 @@ def kontrast(a: str, b: str) -> float:
     return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
 
 
+def titulok_okna(okno: tk.Misc, tmavy: bool) -> None:
+    """Titulok okna: v tmavom režime čierny s bielym textom (Windows 10 tmavý titulok, Windows 11 presná farba),
+    v svetlom predvolený systémový. Chyby sa ignorujú."""
+    try:
+        import ctypes
+        okno.update_idletasks()
+        hwnd = ctypes.windll.user32.GetParent(okno.winfo_id())
+        dwm = ctypes.windll.dwmapi
+        predvolena = 0xFFFFFFFF                                   # DWMWA_COLOR_DEFAULT
+        hodnoty = ((20, 1), (35, 0x000000), (36, 0xFFFFFF), (34, 0x000000)) if tmavy else \
+            ((20, 0), (35, predvolena), (36, predvolena), (34, predvolena))
+        for atribut, hodnota in hodnoty:
+            v = ctypes.c_uint(hodnota) if hodnota > 0x7FFFFFFF else ctypes.c_int(hodnota)
+            dwm.DwmSetWindowAttribute(hwnd, atribut, ctypes.byref(v), 4)
+    except Exception:  # noqa: BLE001 – vzhľad titulku nie je dôvod zhodiť okno
+        pass
+
+
 def centruj(okno: tk.Misc, rodic: tk.Misc, velkost: tuple[int, int] | None = None) -> None:
     """Umiestni dialóg do stredu hlavného okna (`velkost` = pevná veľkosť okna, inak podľa obsahu)."""
     okno.update_idletasks()
@@ -152,6 +170,7 @@ def centruj(okno: tk.Misc, rodic: tk.Misc, velkost: tuple[int, int] | None = Non
         x = (okno.winfo_screenwidth() - w) // 2
         y = (okno.winfo_screenheight() - h) // 3
     okno.geometry((f"{w}x{h}" if velkost else "") + f"+{max(x, 0)}+{max(y, 0)}")
+    titulok_okna(okno, je_tmava())
 
 
 class Tooltip:

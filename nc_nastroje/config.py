@@ -38,6 +38,9 @@ class Nastavenia:
     spustat_aplikacie_pri_starte: bool = True  # spustiť aplikácie s `spustit_pri_starte` z apps.json
     odoslat_do: list = field(default_factory=list)   # id aplikácií, ktoré majú zástupcu v „Odoslať do“
     skryte_aplikacie: list = field(default_factory=list)   # id aplikácií, ktoré si používateľ na tomto PC skryl
+    klavesova_skratka: str = "Ctrl+Alt+N"  # globálna skratka na vyvolanie okna (prázdne = vypnuté)
+    otvarat_v: str = "prieskumnik"             # kde sa otvára priečinok zákazky: prieskumnik | totalcmd
+    totalcmd_cesta: str = ""                   # exe alebo priečinok Total Commandera (prázdne = nájde sa sám)
     port_instancie: int = 47653                # lokálny port pre jednu inštanciu launchera (127.0.0.1)
     tray_oznamenie_ukazane: bool = False       # oznámenie „beží v oblasti oznámení“ sa ukáže len raz
 
@@ -55,6 +58,10 @@ class Nastavenia:
         if not isinstance(self.odoslat_do, list):
             self.odoslat_do = []
         self.odoslat_do = [str(x) for x in self.odoslat_do]
+        if self.otvarat_v not in ("prieskumnik", "totalcmd"):
+            self.otvarat_v = "prieskumnik"
+        self.totalcmd_cesta = str(self.totalcmd_cesta or "")
+        self.klavesova_skratka = str(self.klavesova_skratka or "").strip()
         if not isinstance(self.skryte_aplikacie, list):
             self.skryte_aplikacie = []
         self.skryte_aplikacie = [str(x) for x in self.skryte_aplikacie]

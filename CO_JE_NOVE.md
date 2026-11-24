@@ -1,5 +1,14 @@
 # Čo je nové
 
+## 2026.11.24-20
+- Verzia aplikácie je v názve okna aj samostatne vpravo dole v stavovom riadku.
+- Titulok okna a pás menu sú čierne (vlastný pás menu namiesto natívneho).
+- F5 (obnoviť stavy a aplikácie) je aj v menu Súbor a ukáže potvrdenie.
+- Globálna klávesová skratka na vyvolanie okna (predvolene Ctrl+Alt+N; Nastavenia → Windows). Win+medzera sa
+  nedá, Windows ju používa na prepínanie jazyka klávesnice.
+- Nastavenia → Cesty: priečinok zákazky sa dá otvárať v Total Commanderi (nová záložka) namiesto Prieskumníka.
+  Total Commander sa nájde sám (register, bežné priečinky), prípadne zadáš cestu k TOTALCMD64.EXE.
+
 ## 2026.11.24-19
 - Pole zákazky: pruh „Hľadám zákazku…“ sa ukáže až keď hľadanie trvá dlhšie ako pol sekundy (nebliká), a po otvorení
   priečinka ostane 4 s potvrdenie „Otvorená zákazka … (L:\zákazník\zákazka)“.

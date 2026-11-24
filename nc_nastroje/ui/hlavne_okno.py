@@ -21,13 +21,14 @@ from ..katalog import App, filtruj_rezim
 from ..pozadie import Pozadie
 from ..verzia import VERZIA
 from . import napoveda
+from .. import klavesova_skratka, priecinky
 from .dlazdica import Dlazdica
 from .nasadenie_okno import OknoNasadenia
 from .nastavenia import OknoNastaveni
 from . import tema
 from .pole_zakazky import PoleZakazky
 from .prve_spustenie import PrveSpustenie, Volby, volby_na_nastavenia
-from .tema import FONT, PALETA, STAVY, Tooltip, nastav_temu, prefarbi_strom, prepni_ttk_temu
+from .tema import FONT, PALETA, STAVY, Tooltip, nastav_temu, prefarbi_strom, prepni_ttk_temu, titulok_okna
 from .vyber_aplikacie import VyberAplikacie
 from .zakazka_okna import NenaslaZakazku, OknoZakazky, VyberZakazky
 from .zoznam_detail import ZoznamDetail
@@ -74,7 +75,7 @@ class HlavneOkno(TkinterDnD.Tk):
         nastav_temu(self.nast.tmavy_rezim)           # paleta musí byť nastavená pred vytvorením widgetov
         self._index = zakazky.IndexZakaziek(Path(self.nast.koren_l))   # cache zákaziek (lokálny súbor)
         self._index_pokus = datetime.min
-        self.title("NC Nástroje")
+        self.title(f"NC Nástroje – {VERZIA}")
         self.geometry("1160x740")
         self.minsize(900, 600)
         try:
@@ -114,7 +115,7 @@ class HlavneOkno(TkinterDnD.Tk):
         self._zobraz_pohlad()
 
         self.bind("<F1>", lambda e: napoveda.ukaz_napovedu(self))
-        self.bind("<F5>", lambda e: self.nacitaj())  # znova načíta katalóg, aktualizácie aj stavy
+        self.bind("<F5>", lambda e: self.obnov_rucne())  # znova načíta katalóg, aktualizácie aj stavy
         self.bind("<Control-f>", lambda e: self.aktivne_pole().fokus())
         for i in range(1, 10):
             self.bind(f"<Control-Key-{i}>", lambda e, i=i: self._spusti_podla_poradia(i - 1))
@@ -125,6 +126,9 @@ class HlavneOkno(TkinterDnD.Tk):
         if self._instancia:
             self._instancia.nastav_obsluhu(lambda p: self.v_ui(lambda: self._spracuj_prikaz(p)))
         self.after(100, self._ui_pump)
+        self.after(50, self._vzhlad_hore)                        # titulok okna musí byť už vytvorený
+        self._skratka = klavesova_skratka.GlobalnaSkratka(lambda: self.v_ui(self.zobraz_okno))
+        self.after(300, self._nastav_skratku)
         self.after(30_000, self._katalog_hotovy_force)          # poistka, keby pozadie nikdy nedobehlo
         self.nacitaj()
         self.after(self.nast.interval_stavov_s * 1000, self._casovac_stavov)
@@ -138,6 +142,7 @@ class HlavneOkno(TkinterDnD.Tk):
         m = tk.Menu(self)
         subor = tk.Menu(m, tearoff=0)
         subor.add_command(label="Nastavenia…", command=self.otvor_nastavenia)
+        subor.add_command(label="Obnoviť stavy a aplikácie", accelerator="F5", command=self.obnov_rucne)
         subor.add_command(label="Obnoviť index zákaziek", command=lambda: self.obnov_index(sila=True))
         subor.add_command(label="Nasadiť aplikáciu…", command=self.otvor_nasadenie)
         self._subor_menu = subor
@@ -160,7 +165,31 @@ class HlavneOkno(TkinterDnD.Tk):
         nap.add_command(label="Čo je nové", command=lambda: napoveda.ukaz_co_je_nove(self))
         nap.add_command(label="O programe", command=lambda: napoveda.ukaz_o_programe(self))
         m.add_cascade(label="Nápoveda", menu=nap)
-        self.config(menu=m)
+        # tmavý režim: vlastný čierny pás menu (natívne menu Windows sa zafarbiť nedá); svetlý režim: natívne menu
+        self._menu_nativne = m
+        pas = tk.Frame(self, bg="#000000")
+        self._menu_pas = pas
+        for nazov, podmenu in (("Súbor", subor), ("Zobraziť", zobr), ("Nápoveda", nap)):
+            tk.Menubutton(pas, text=nazov, menu=podmenu, bg="#000000", fg="#FFFFFF", activebackground="#333333",
+                          activeforeground="#FFFFFF", relief="flat", borderwidth=0, padx=12, pady=5,
+                          font=(FONT, 10)).pack(side="left")
+        self._vzhlad_hore()
+
+    def _vzhlad_hore(self):
+        """Tmavý režim: čierny titulok a čierny pás menu; svetlý: predvolený titulok a natívne menu."""
+        tmava = tema.je_tmava()
+        titulok_okna(self, tmava)
+        if tmava:
+            self.config(menu="")
+            if not self._menu_pas.winfo_ismapped():
+                ostatne = [w for w in self.pack_slaves() if w is not self._menu_pas]
+                if ostatne:
+                    self._menu_pas.pack(side="top", fill="x", before=ostatne[0])
+                else:
+                    self._menu_pas.pack(side="top", fill="x")
+        else:
+            self._menu_pas.pack_forget()
+            self.config(menu=self._menu_nativne)
 
     def _postav_horny_riadok(self):
         r = tk.Frame(self, bg=PALETA["pozadie"])
@@ -254,9 +283,9 @@ class HlavneOkno(TkinterDnD.Tk):
     def _otvor_zhodu(self, zhoda, akcia: str):
         cesta = zhoda.cesta(Path(self.nast.koren_r if akcia == "R" else self.nast.koren_l))
         try:
-            os.startfile(str(cesta))
+            vyhrada = priecinky.otvor_priecinok(cesta, self.nast.otvarat_v, self.nast.totalcmd_cesta)
             log.info("Otvorená zákazka %s", cesta)
-            self._potvrd(f"Otvorená zákazka {zhoda.zakazka} ({'R:' if akcia == 'R' else 'L:'}\\{zhoda.zakaznik}\\{zhoda.zakazka})")
+            self._potvrd(vyhrada or f"Otvorená zákazka {zhoda.zakazka} ({'R:' if akcia == 'R' else 'L:'}\\{zhoda.zakaznik}\\{zhoda.zakazka})")
         except OSError as e:
             log.exception("Otvorenie %s zlyhalo", cesta)
             self._upozorni(f"Priečinok sa nepodarilo otvoriť: {e.strerror or e}")
@@ -357,8 +386,10 @@ class HlavneOkno(TkinterDnD.Tk):
             self._disky[pismeno] = (bodka, text)
         self._rezim = tk.Label(s, bg=PALETA["pozadie"], fg=PALETA["text2"], font=(FONT, 9))
         self._rezim.pack(side="left", padx=20, pady=6)
+        tk.Label(s, text=f"verzia {VERZIA}", bg=PALETA["pozadie"], fg=PALETA["text2"], font=(FONT, 9)).pack(
+            side="right", padx=(0, 20))
         self._zdroj_text = tk.Label(s, bg=PALETA["pozadie"], fg=PALETA["text2"], font=(FONT, 9))
-        self._zdroj_text.pack(side="right", padx=20)
+        self._zdroj_text.pack(side="right", padx=12)
         self._aktualizuj_rezim()
         self._aktualizuj_zdroj_text()
 
@@ -370,12 +401,22 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def _aktualizuj_zdroj_text(self):
         if self._katalog_zdroj == "cache":
-            text = f"Aplikácie z lokálnej kópie (L:\\ nedostupný) · launcher v {VERZIA}"
+            text = "Aplikácie z lokálnej kópie (L:\\ nedostupný)"
         else:
-            text = f"Aplikácie z {self.nast.koren_nastrojov} · launcher v {VERZIA}"
+            text = f"Aplikácie z {self.nast.koren_nastrojov}"
         self._zdroj_text.configure(text=text)
 
     # ---------- katalóg, aktualizácie a dlaždice ----------
+    def obnov_rucne(self):
+        """F5 / Súbor → Obnoviť: znova načíta katalóg, aktualizácie a stavy a ukáže potvrdenie."""
+        self.nacitaj()
+        self._potvrd("Obnovujem aplikácie, aktualizácie a stavy…")
+
+    def _nastav_skratku(self):
+        chyba = self._skratka.nastav(self.nast.klavesova_skratka)
+        if chyba:
+            self._upozorni(chyba)
+
     def nacitaj(self, sila: bool = False):
         """Rýchlo zobrazí katalóg z lokálnej cache (bez siete), potom na pozadí načíta čerstvý
         apps.json z L:, skopíruje nové verzie a prečíta stavy. `sila` = prekresliť dlaždice vždy."""
@@ -425,6 +466,7 @@ class HlavneOkno(TkinterDnD.Tk):
         self.nast.tmavy_rezim = tmava
         self._uloz_nastavenia_ticho()
         mapa = nastav_temu(tmava)
+        self._vzhlad_hore()                        # čierny titulok a pás menu len v tmavom režime
         prepni_ttk_temu(self, tmava)               # sv_ttk bez tk_setPalette (ten by prebil naše farby)
         self.configure(bg=PALETA["pozadie"])
         prefarbi_strom(self, mapa)
@@ -868,6 +910,8 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def destroy(self):
         self._koniec = True
+        if getattr(self, "_skratka", None):
+            self._skratka.zastav()
         if self._tray:
             self._tray.zastav()
             self._tray = None
@@ -1088,6 +1132,8 @@ class HlavneOkno(TkinterDnD.Tk):
             self._aktualizuj_tip_indexu()
         self._aktualizuj_rezim()
         self._aplikuj_windows(stara, nast)
+        if nast.klavesova_skratka != stara.klavesova_skratka:
+            self._nastav_skratku()
         if zmena_korena:                          # stavy a aktualizácie z iného koreňa neplatia
             self._stavy, self._aktual, self._launcher_akt, self._caka = {}, {}, None, {}
         self.nacitaj(sila=True)

@@ -26,6 +26,9 @@ class OknoNastaveni(tk.Toplevel):
             "koren_l": tk.StringVar(value=nast.koren_l),
             "koren_r": tk.StringVar(value=nast.koren_r),
             "rezim": tk.StringVar(value=nast.rezim),
+            "klavesova_skratka": tk.StringVar(value=nast.klavesova_skratka),
+            "otvarat_v": tk.StringVar(value=nast.otvarat_v),
+            "totalcmd_cesta": tk.StringVar(value=nast.totalcmd_cesta),
         }
         self._interval = tk.StringVar(value=str(nast.interval_stavov_s))
         self._po_prihlaseni = tk.BooleanVar(value=nast.spustit_po_prihlaseni)
@@ -84,6 +87,18 @@ class OknoNastaveni(tk.Toplevel):
             Tooltip(b, "Vybrať priečinok")
         ttk.Label(f, text="Pri vývoji používaj falošný koreň (test_data), nie skutočné L:/R:.",
                   foreground=PALETA["text2"]).grid(row=3, column=0, columnspan=3, sticky="w", pady=(10, 0))
+        ram = ttk.LabelFrame(f, text="Otvárať priečinok zákazky v", padding=10)
+        ram.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(16, 0))
+        ttk.Radiobutton(ram, text="Prieskumníkovi", value="prieskumnik",
+                        variable=self._v["otvarat_v"]).grid(row=0, column=0, columnspan=3, sticky="w", pady=3)
+        ttk.Radiobutton(ram, text="Total Commanderi (nová záložka)", value="totalcmd",
+                        variable=self._v["otvarat_v"]).grid(row=1, column=0, columnspan=3, sticky="w", pady=3)
+        ttk.Label(ram, text="Total Commander (prázdne = nájde sa sám)").grid(row=2, column=0, sticky="w", pady=(8, 0))
+        e = ttk.Entry(ram, textvariable=self._v["totalcmd_cesta"], width=40)
+        e.grid(row=2, column=1, padx=8, pady=(8, 0))
+        b = ttk.Button(ram, text="…", width=3, command=self._prehladaj_tc)
+        b.grid(row=2, column=2, pady=(8, 0))
+        Tooltip(b, "Vybrať TOTALCMD64.EXE")
         return f
 
     def _rezim(self, rodic):
@@ -130,6 +145,14 @@ class OknoNastaveni(tk.Toplevel):
                              variable=self._app_pri_starte)
         c2.grid(row=1, column=0, sticky="w", pady=6)
         Tooltip(c2, "Spustí sa len to, čo ešte nebeží")
+        ram_skratka = ttk.LabelFrame(f, text="Klávesová skratka na vyvolanie okna", padding=10)
+        ram_skratka.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+        ttk.Label(ram_skratka, text="Skratka").grid(row=0, column=0, sticky="w")
+        sk = ttk.Entry(ram_skratka, textvariable=self._v["klavesova_skratka"], width=24)
+        sk.grid(row=0, column=1, padx=8)
+        Tooltip(sk, "napr. Ctrl+Alt+N, Ctrl+Shift+Space, Win+F2 (prázdne = vypnuté). Win+medzera je vyhradená Windows.")
+        ttk.Label(ram_skratka, text="predvolene Ctrl+Alt+N (prázdne = vypnuté); Win+medzera patrí Windows",
+                  foreground=PALETA["text2"]).grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
         ram_odoslat = ttk.LabelFrame(f, text="Odoslať do – pravý klik na súbor → Odoslať do", padding=10)
         ram_odoslat.grid(row=2, column=0, sticky="ew", pady=(12, 0))
         if self._apps:
@@ -140,6 +163,12 @@ class OknoNastaveni(tk.Toplevel):
         else:
             ttk.Label(ram_odoslat, text="Katalóg aplikácií ešte nie je načítaný.", foreground=PALETA["text2"]).grid()
         return f
+
+    def _prehladaj_tc(self):
+        cesta = filedialog.askopenfilename(parent=self, title="Total Commander",
+                                           filetypes=[("Total Commander", "TOTALCMD*.EXE"), ("Všetky súbory", "*.*")])
+        if cesta:
+            self._v["totalcmd_cesta"].set(cesta.replace("/", "\\"))
 
     def _prehladaj(self, kluc):
         cesta = filedialog.askdirectory(parent=self, initialdir=self._v[kluc].get() or None)
