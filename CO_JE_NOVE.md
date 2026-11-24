@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.24-19
+- Pole zákazky: pruh „Hľadám zákazku…“ sa ukáže až keď hľadanie trvá dlhšie ako pol sekundy (nebliká), a po otvorení
+  priečinka ostane 4 s potvrdenie „Otvorená zákazka … (L:\zákazník\zákazka)“.
+
 ## 2026.11.24-18
 - Nastavenia → Aplikácie: na každom počítači si môžeš zvoliť, ktoré aplikácie sa zobrazia (skryté sa nekopírujú
   a nespúšťajú). Platí popri režime Na prezeranie.

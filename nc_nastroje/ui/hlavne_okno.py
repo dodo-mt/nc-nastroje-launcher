@@ -228,7 +228,7 @@ class HlavneOkno(TkinterDnD.Tk):
                         na_r[z.rel] = False
             return {"akcia": akcia, "text": text, "zhody": zhody, "na_r": na_r, "chyba": ""}
 
-        self._info(f"Hľadám zákazku „{text}“…")
+        self._info(f"Hľadám zákazku „{text}“…", po_ms=500)
         self._pozadie.spusti("zakazka", praca, self._po_hladani)
 
     def _po_hladani(self, res: dict):
@@ -256,6 +256,7 @@ class HlavneOkno(TkinterDnD.Tk):
         try:
             os.startfile(str(cesta))
             log.info("Otvorená zákazka %s", cesta)
+            self._potvrd(f"Otvorená zákazka {zhoda.zakazka} ({'R:' if akcia == 'R' else 'L:'}\\{zhoda.zakaznik}\\{zhoda.zakazka})")
         except OSError as e:
             log.exception("Otvorenie %s zlyhalo", cesta)
             self._upozorni(f"Priečinok sa nepodarilo otvoriť: {e.strerror or e}")
@@ -777,11 +778,21 @@ class HlavneOkno(TkinterDnD.Tk):
             self._pruh_id = None
         self._pruh_dnd.pack_forget()
 
-    def _info(self, text: str):
-        """Neutrálna informácia v hornom pruhu (napr. „Hľadám…“); zmizne po výsledku alebo po 15 s."""
+    def _info(self, text: str, po_ms: int = 0):
+        """Neutrálna informácia v hornom pruhu (napr. „Hľadám…“); zmizne po výsledku alebo po 15 s.
+        `po_ms` > 0: pruh sa ukáže až po tomto čase (rýchla akcia tak neblikne); `_skry_pruh` ho zruší."""
         self._skry_pruh()
+        if po_ms > 0:
+            self._pruh_id = self.after(po_ms, lambda: self._info(text))
+            return
         self._ukaz_pruh(text, esc=False)
         self._pruh_id = self.after(15000, self._skry_pruh)
+
+    def _potvrd(self, text: str):
+        """Krátke potvrdenie akcie v hornom pruhu (4 s), napr. „Otvorená zákazka …“."""
+        self._skry_pruh()
+        self._ukaz_pruh(text, esc=False)
+        self._pruh_id = self.after(4000, self._skry_pruh)
 
     def _upozorni(self, text: str):
         """Krátke upozornenie v hornom pruhu (zmizne samo)."""
