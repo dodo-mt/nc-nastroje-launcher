@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.24-12
+- Oprava aktualizácie launchera: po zatvorení okna proces vždy skončí. Predtým ho mohlo zdržať vlákno na pozadí a po
+  „Aktualizovať teraz“ ostala bežať stará verzia, takže sa nová nespustila.
+
 ## 2026.11.24-11
 - Aplikácia sa dá spúšťať priamo z pevnej cesty bez kopírovania: v apps.json `spustit` = plná cesta a bez `zdroj`
   (napr. Lupa: `L:\_Lupa\Lupa.exe`, ktorá sa kopíruje sama). Dlaždica ukáže „priamo z L:“.

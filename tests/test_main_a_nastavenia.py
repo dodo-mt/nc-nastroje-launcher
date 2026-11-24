@@ -88,3 +88,18 @@ def test_pozastavenie_je_lokalny_priznak(tmp_path):
     ovladanie.nastav_pozastaveny("triedic_nc", False, tmp_path)
     assert ovladanie.je_pozastaveny("triedic_nc", tmp_path) is False
     ovladanie.nastav_pozastaveny("triedic_nc", False, tmp_path)        # opakované vypnutie nevadí
+
+
+def test_tvrdy_koniec_zo_zdrojoveho_kodu_nic_nerobi():
+    from nc_nastroje import main
+    main.tvrdy_koniec()                                  # nie je zostavený exe – proces (pytest) musí žiť
+
+
+def test_tvrdy_koniec_v_exe_skonci_proces(monkeypatch):
+    from nc_nastroje import main
+    volane = []
+    monkeypatch.setattr(main.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(main.os, "_exit", lambda k: volane.append(k))
+    monkeypatch.setattr(main.logging, "shutdown", lambda: None)
+    main.tvrdy_koniec()
+    assert volane == [0]

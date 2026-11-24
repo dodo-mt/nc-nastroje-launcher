@@ -97,6 +97,15 @@ def main(argv: list[str] | None = None):
         raise
     finally:
         instancia.zatvor()
+    tvrdy_koniec()
+
+
+def tvrdy_koniec() -> None:
+    """V zostavenom exe po zatvorení okna proces vždy skončí. Inak ho môže zdržať vlákno na pozadí visiace na sieti
+    (L:) a nová verzia po aktualizácii by sa nespustila (beží ešte stará inštancia). Zo zdrojového kódu sa nič nerobí."""
+    if getattr(sys, "frozen", False):
+        logging.shutdown()
+        os._exit(0)
 
 
 if __name__ == "__main__":

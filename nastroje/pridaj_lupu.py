@@ -1,4 +1,4 @@
-"""Pridá (alebo opraví) záznam Lupy v apps.json na L:\_Nastroje – Lupa sa spúšťa priamo z L:\_Lupa\Lupa.exe.
+r"""Pridá (alebo opraví) záznam Lupy v apps.json na L:\_Nastroje – Lupa sa spúšťa priamo z L:\_Lupa\Lupa.exe.
 
     python nastroje/pridaj_lupu.py [--koren L:\_Nastroje] [--exe L:\_Lupa\Lupa.exe]
 
