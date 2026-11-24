@@ -2,44 +2,22 @@
   "verzia_formatu": 1,
   "aplikacie": [
     {
-      "id": "tnc_sync",
-      "nazov": "TNC Sync",
-      "popis": "Záloha programov zo strojov",
+      "id": "programovy_list",
+      "nazov": "Programový list Hypermill",
+      "popis": "Nákresy upnutia → Excel + PDF",
       "typ": "exe",
       "verzia": "",
       "zdroj": "",
-      "spustit": "tnc_sync.exe",
-      "ikona": "tnc_sync.png",
-      "farba": "#005FB8",
+      "spustit": "programovy_list.exe",
+      "ikona": "programovy_list.png",
+      "farba": "#E07B00",
       "prijima": [
+        ".png",
+        ".jpg",
+        ".xlsx",
         "priecinok"
       ],
-      "argumenty": "{cesty}",
-      "stav": {
-        "adapter": "tnc_sync"
-      }
-    },
-    {
-      "id": "triedic_nc",
-      "nazov": "Triedič NC",
-      "popis": "Rozdelenie programov podľa stroja",
-      "typ": "exe",
-      "verzia": "",
-      "zdroj": "",
-      "spustit": "triedic_nc.exe",
-      "ikona": "triedic_nc.png",
-      "farba": "#7B3FBF",
-      "prijima": [
-        ".h",
-        ".mpf"
-      ],
-      "argumenty": "{cesty}",
-      "len_plny_rezim": true,
-      "tlacidlo": "Otvoriť",
-      "pozastavit": true,
-      "stav": {
-        "adapter": "proces"
-      }
+      "argumenty": "{cesty}"
     },
     {
       "id": "nastrojovy_list",
@@ -64,19 +42,17 @@
       "co_je_nove": "nastrojovy_list\\CO_JE_NOVE.md"
     },
     {
-      "id": "programovy_list",
-      "nazov": "Programový list Hypermill",
-      "popis": "Nákresy upnutia → Excel + PDF",
+      "id": "cnc_vykres_edgecam",
+      "nazov": "Programový list Edgecam",
+      "popis": "Výkres upnutia z NC programu → Excel + PDF",
       "typ": "exe",
       "verzia": "",
       "zdroj": "",
-      "spustit": "programovy_list.exe",
-      "ikona": "programovy_list.png",
-      "farba": "#E07B00",
+      "spustit": "CncVykresGenerator.exe",
+      "ikona": "cnc_vykres_edgecam.png",
+      "farba": "#4A962D",
       "prijima": [
-        ".png",
-        ".jpg",
-        ".xlsx",
+        ".h",
         "priecinok"
       ],
       "argumenty": "{cesty}"
@@ -101,20 +77,26 @@
       "argumenty": "{cesty}"
     },
     {
-      "id": "cnc_vykres_edgecam",
-      "nazov": "Programový list Edgecam",
-      "popis": "Výkres upnutia z NC programu → Excel + PDF",
+      "id": "triedic_nc",
+      "nazov": "Triedič NC",
+      "popis": "Rozdelenie programov podľa stroja",
       "typ": "exe",
       "verzia": "",
       "zdroj": "",
-      "spustit": "CncVykresGenerator.exe",
-      "ikona": "cnc_vykres_edgecam.png",
-      "farba": "#4A962D",
+      "spustit": "triedic_nc.exe",
+      "ikona": "triedic_nc.png",
+      "farba": "#7B3FBF",
       "prijima": [
         ".h",
-        "priecinok"
+        ".mpf"
       ],
-      "argumenty": "{cesty}"
+      "argumenty": "{cesty}",
+      "len_plny_rezim": true,
+      "tlacidlo": "Otvoriť",
+      "pozastavit": true,
+      "stav": {
+        "adapter": "proces"
+      }
     },
     {
       "id": "lupa",
@@ -129,6 +111,24 @@
       "stav": {
         "adapter": "lupa_sken",
         "cesta": "_Lupa"
+      }
+    },
+    {
+      "id": "tnc_sync",
+      "nazov": "TNC Sync",
+      "popis": "Záloha programov zo strojov",
+      "typ": "exe",
+      "verzia": "",
+      "zdroj": "",
+      "spustit": "tnc_sync.exe",
+      "ikona": "tnc_sync.png",
+      "farba": "#005FB8",
+      "prijima": [
+        "priecinok"
+      ],
+      "argumenty": "{cesty}",
+      "stav": {
+        "adapter": "tnc_sync"
       }
     }
   ],

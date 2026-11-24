@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.24-17
+- Nové poradie dlaždíc (Programový list Hypermill, Nástrojový list, Programový list Edgecam / NC Editor, Triedič NC, Lupa /
+  TNC Sync) a nová ikona Programového listu Hypermill (ozubené koleso).
+
 ## 2026.11.24-16
 - Oprava automatickej aktualizácie launchera: pomocný aktualizátor sa spúšťal bez konzoly, v ktorej sa príkaz
   `tasklist | find` zasekol, takže čakanie na ukončenie launchera nikdy neskončilo a verzia sa neprepla. Teraz beží

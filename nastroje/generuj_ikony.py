@@ -47,6 +47,19 @@ def obrazok(d, c, w):
     d.line((140, 450, 270, 360, 340, 410, 420, 330, 500, 420), fill=c, width=w - 8, joint="curve")
 
 
+def ozubene_koleso(d, c, w):
+    import math
+    cx = cy = S // 2
+    zubov = 8
+    body = []
+    for i in range(zubov * 4):
+        r = 225 if i % 4 in (0, 1) else 175
+        uhol = math.radians(i * 360 / (zubov * 4) - 360 / (zubov * 8))
+        body.append((cx + r * math.cos(uhol), cy + r * math.sin(uhol)))
+    d.polygon(body, fill=c)
+    d.ellipse((cx - 80, cy - 80, cx + 80, cy + 80), fill=zmiesaj(c, 0.12))
+
+
 def zameriavac(d, c, w):
     d.rounded_rectangle((130, 130, 510, 510), radius=30, outline=c, width=w - 12)
     d.ellipse((240, 240, 400, 400), outline=c, width=w - 8)
@@ -61,7 +74,7 @@ def kod(d, c, w):
 
 IKONY = {
     "tnc_sync": ("#005FB8", sync), "triedic_nc": ("#7B3FBF", filtr), "lupa": ("#C4244B", lupa),
-    "nastrojovy_list": ("#0B7A55", dokument), "programovy_list": ("#E07B00", obrazok),
+    "nastrojovy_list": ("#0B7A55", dokument), "programovy_list": ("#E07B00", ozubene_koleso),
     "nc_editor": ("#555555", kod), "cnc_vykres_edgecam": ("#4A962D", zameriavac),
 }
 
