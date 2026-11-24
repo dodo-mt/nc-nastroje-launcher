@@ -260,6 +260,8 @@ class HlavneOkno(TkinterDnD.Tk):
         ok, sprava = spustac.spusti_hladaj(app, text)
         if not ok:
             self._upozorni(sprava)
+        elif app.typ != "web":
+            self._upozorni("Lupa sa otvorila – hľadaný text zadaj priamo v nej.")
 
     def obnov_index(self, sila: bool = False):
         """Obnoví index zákaziek na pozadí (raz denne, alebo hneď z menu). L: sa len číta."""
@@ -518,6 +520,8 @@ class HlavneOkno(TkinterDnD.Tk):
         """`v 2026.11.24-1`, `v 2026.11.19-1 → 11.24-1`, `v … (staršia)` po návrate späť, `web`."""
         if app.typ == "web":
             return "web"
+        if app.priamo:
+            return "priamo z L:"
         dir_app = aktualizacie.APPS_DIR / app.id
         aktivna = aktualizacie.aktivna_verzia(dir_app)
         akt = self._aktual.get(app.id)

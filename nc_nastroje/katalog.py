@@ -2,7 +2,7 @@
 import json
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +34,15 @@ class App:
     log: str = ""               # cesta k logu aplikácie (premenné prostredia sa rozbalia, relatívna ku koreňu nástrojov)
     pozastavit: bool = False    # dlaždica má tlačidlo Pozastaviť (Triedič NC)
 
+    @property
+    def priamo(self) -> bool:
+        """Aplikácia sa spúšťa priamo z pevnej cesty (`spustit` = plná cesta, bez `zdroj`), nekopíruje sa (Lupa)."""
+        return self.typ != "web" and not self.zdroj and je_plna_cesta(self.spustit)
+
+
+def je_plna_cesta(cesta: str) -> bool:
+    return bool(cesta) and PureWindowsPath(cesta).is_absolute()
+
 
 def _app_zo_slovnika(d: dict) -> App:
     if not isinstance(d, dict):
@@ -45,7 +54,9 @@ def _app_zo_slovnika(d: dict) -> App:
         raise ValueError(f"neznámy typ '{d['typ']}'")
     if d["typ"] == "web" and not d.get("url"):
         raise ValueError("web aplikácia nemá 'url'")
-    if d["typ"] != "web" and not (d.get("zdroj") and d.get("spustit")):
+    if d["typ"] != "web" and not d.get("spustit"):
+        raise ValueError("chýba 'zdroj' alebo 'spustit'")
+    if d["typ"] != "web" and not d.get("zdroj") and not je_plna_cesta(str(d["spustit"])):
         raise ValueError("chýba 'zdroj' alebo 'spustit'")
     prijima = d.get("prijima") or []
     if not isinstance(prijima, list):

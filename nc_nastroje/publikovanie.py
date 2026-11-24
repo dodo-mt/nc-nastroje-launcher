@@ -16,6 +16,7 @@ from datetime import date
 from pathlib import Path
 
 from .aktualizacie import _spocitaj, je_novsia, parsuj_verziu
+from .katalog import je_plna_cesta
 
 
 INSTALATOR = "Instalovat NC Nastroje.bat"     # pre kolegov: dvojklik na L:\\_Nastroje\\Instalovat NC Nastroje.bat
@@ -83,6 +84,10 @@ def _nacitaj_apps(cesta: Path) -> dict:
     return data
 
 
+def _je_priama(z: dict) -> bool:
+    return z.get("typ") != "web" and not z.get("zdroj") and je_plna_cesta(str(z.get("spustit") or ""))
+
+
 def _zaznam(data: dict, app_id: str) -> dict:
     if app_id == "launcher":
         z = data.get("launcher")
@@ -93,6 +98,8 @@ def _zaznam(data: dict, app_id: str) -> dict:
         if isinstance(z, dict) and z.get("id") == app_id:
             if z.get("typ") == "web":
                 raise PublikaciaChyba(f"'{app_id}' je webová aplikácia – nemá čo publikovať")
+            if _je_priama(z):
+                raise PublikaciaChyba(f"'{app_id}' sa spúšťa priamo z {z.get('spustit')} – nemá čo publikovať")
             return z
     raise PublikaciaChyba(f"Aplikácia '{app_id}' nie je v apps.json – najprv pridaj jej záznam.")
 
@@ -173,7 +180,7 @@ def zoznam_aplikacii(koren: Path) -> list[tuple[str, str]]:
     Posledný je `launcher`, ak má záznam. Vyhodí PublikaciaChyba, ak sa apps.json nedá prečítať."""
     data = _nacitaj_apps(Path(koren) / "apps.json")
     vysledok = [(str(z["id"]), str(z.get("nazov") or z["id"])) for z in data.get("aplikacie") or []
-                if isinstance(z, dict) and z.get("id") and z.get("typ") != "web"]
+                if isinstance(z, dict) and z.get("id") and z.get("typ") != "web" and not _je_priama(z)]
     if isinstance(data.get("launcher"), dict):
         vysledok.append(("launcher", "NC Nástroje (samotný launcher)"))
     return vysledok

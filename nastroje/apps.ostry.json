@@ -11,9 +11,13 @@
       "spustit": "tnc_sync.exe",
       "ikona": "tnc_sync.png",
       "farba": "#005FB8",
-      "prijima": ["priecinok"],
+      "prijima": [
+        "priecinok"
+      ],
       "argumenty": "{cesty}",
-      "stav": {"adapter": "tnc_sync"}
+      "stav": {
+        "adapter": "tnc_sync"
+      }
     },
     {
       "id": "triedic_nc",
@@ -25,12 +29,17 @@
       "spustit": "triedic_nc.exe",
       "ikona": "triedic_nc.png",
       "farba": "#7B3FBF",
-      "prijima": [".h", ".mpf"],
+      "prijima": [
+        ".h",
+        ".mpf"
+      ],
       "argumenty": "{cesty}",
       "len_plny_rezim": true,
       "tlacidlo": "Otvoriť",
       "pozastavit": true,
-      "stav": {"adapter": "proces"}
+      "stav": {
+        "adapter": "proces"
+      }
     },
     {
       "id": "nastrojovy_list",
@@ -42,9 +51,15 @@
       "spustit": "nastrojovy_list.exe",
       "ikona": "nastrojovy_list.png",
       "farba": "#0B7A55",
-      "prijima": [".pof", "priecinok"],
+      "prijima": [
+        ".pof",
+        "priecinok"
+      ],
       "argumenty": "{cesty}",
-      "stav": {"adapter": "subor_json", "cesta": "_stav\\nastrojovy_list"},
+      "stav": {
+        "adapter": "subor_json",
+        "cesta": "_stav\\nastrojovy_list"
+      },
       "log": "_stav\\nastrojovy_list",
       "co_je_nove": "nastrojovy_list\\CO_JE_NOVE.md"
     },
@@ -58,7 +73,12 @@
       "spustit": "programovy_list.exe",
       "ikona": "programovy_list.png",
       "farba": "#C4244B",
-      "prijima": [".png", ".jpg", ".xlsx", "priecinok"],
+      "prijima": [
+        ".png",
+        ".jpg",
+        ".xlsx",
+        "priecinok"
+      ],
       "argumenty": "{cesty}"
     },
     {
@@ -71,8 +91,29 @@
       "spustit": "nc_editor.exe",
       "ikona": "nc_editor.png",
       "farba": "#555555",
-      "prijima": [".h", ".i", ".mpf", ".spf", ".nc"],
+      "prijima": [
+        ".h",
+        ".i",
+        ".mpf",
+        ".spf",
+        ".nc"
+      ],
       "argumenty": "{cesty}"
+    },
+    {
+      "id": "lupa",
+      "nazov": "Lupa",
+      "popis": "Prehliadač zákaziek na L:\\",
+      "typ": "exe",
+      "spustit": "L:\\_Lupa\\Lupa.exe",
+      "ikona": "lupa.png",
+      "farba": "#C25A00",
+      "tlacidlo": "Otvoriť",
+      "prijima": [],
+      "stav": {
+        "adapter": "lupa_sken",
+        "cesta": "_Lupa"
+      }
     }
   ],
   "launcher": {

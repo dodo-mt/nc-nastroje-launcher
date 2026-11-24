@@ -228,3 +228,13 @@ def test_zoznam_aplikacii_bez_apps_json(tmp_path):
     from nc_nastroje.publikovanie import zoznam_aplikacii
     with pytest.raises(publikuj.PublikaciaChyba, match="apps.json"):
         zoznam_aplikacii(tmp_path)
+
+
+def test_priamo_spustana_aplikacia_sa_nepublikuje(tmp_path):
+    from nc_nastroje.publikovanie import zoznam_aplikacii
+    (tmp_path / "apps.json").write_text(json.dumps({"aplikacie": [
+        {"id": "lupa", "nazov": "Lupa", "typ": "exe", "spustit": "L:\_Lupa\Lupa.exe"},
+        {"id": "a", "nazov": "Alfa", "typ": "exe", "zdroj": "", "spustit": "a.exe"}]}), encoding="utf-8")
+    assert zoznam_aplikacii(tmp_path) == [("a", "Alfa")]
+    with pytest.raises(publikuj.PublikaciaChyba, match="priamo"):
+        publikuj.publikuj(tmp_path, "lupa", tmp_path)

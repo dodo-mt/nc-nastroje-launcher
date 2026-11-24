@@ -27,6 +27,8 @@ NIE_JE_LOKALNE = "Aplikácia sa ešte nestihla skopírovať z L:\\ – skús o c
 def priecinok_aplikacie(app: App) -> Path | None:
     """Priečinok aktívnej LOKÁLNEJ verzie (apps/<id>/<verzia> v %LOCALAPPDATA%/NC_Nastroje);
     z L: sa aplikácie nespúšťajú. None = zatiaľ nie je skopírovaná."""
+    if app.priamo:                       # spúšťa sa z pevnej cesty (napr. L:\_Lupa), nekopíruje sa
+        return Path(app.spustit).parent
     return aktualizacie.priecinok_aktivnej(app.id) if app.zdroj else None
 
 
@@ -107,6 +109,8 @@ def spusti_hladaj(app: App, text: str) -> tuple[bool, str]:
     """Otvorí webovú aplikáciu (Lupu) s hľadaným textom cez `url_hladat` (URL-enkódovaný). Bez `url_hladat` ju
     otvorí len tak. Vráti (ok, správa). Nikdy nevyhodí výnimku."""
     try:
+        if app.typ != "web" and app.priamo:
+            return spusti(app)           # exe Lupa hľadaný text neprijíma – otvorí sa len aplikácia
         if app.typ != "web" or not app.url:
             return False, "Aplikácia nevie hľadať (nie je webová)"
         url = app.url_hladat.format(url=app.url, text=quote(text)) if app.url_hladat else app.url

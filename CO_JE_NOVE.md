@@ -1,5 +1,11 @@
 # Čo je nové
 
+## 2026.11.24-11
+- Aplikácia sa dá spúšťať priamo z pevnej cesty bez kopírovania: v apps.json `spustit` = plná cesta a bez `zdroj`
+  (napr. Lupa: `L:\_Lupa\Lupa.exe`, ktorá sa kopíruje sama). Dlaždica ukáže „priamo z L:“.
+- „Hľadať v Lupe“ pri exe Lupe ju len otvorí (hľadaný text zadáš v nej). Okno Nasadiť takéto aplikácie nenúka.
+- Nový `nastroje/pridaj_lupu.py` pridá záznam Lupy do apps.json na L:.
+
 ## 2026.11.24-10
 - Súbor → Nasadiť aplikáciu… (len plný režim): vyberieš aplikáciu a priečinok s buildom a launcher ho nasadí na
   L:\_Nastroje (rovnaké kontroly a atomický zápis apps.json ako `nastroje/publikuj.py`). Pred zápisom sa pýta.

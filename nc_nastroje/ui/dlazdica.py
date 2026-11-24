@@ -79,7 +79,7 @@ class Dlazdica(tk.Frame):
         spodok = tk.Frame(self, bg=t["karta"])
         spodok.grid(row=5, column=0, columnspan=3, sticky="sew", padx=16, pady=(0, 16))
         spodok.columnconfigure(0, weight=1)
-        verzia = "web" if app.typ == "web" else f"v {app.verzia}"
+        verzia = "web" if app.typ == "web" else ("priamo z L:" if app.priamo else f"v {app.verzia}")
         self._verzia_lbl = tk.Label(spodok, text=verzia, font=(FONT, 9), bg=t["karta"], fg=t["text2"])
         self._verzia_lbl.grid(row=0, column=0, sticky="sw")
         tlacidla = tk.Frame(spodok, bg=t["karta"])

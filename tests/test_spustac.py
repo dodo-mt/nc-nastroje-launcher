@@ -80,3 +80,13 @@ def test_stare_docasne_subory_sa_zmazu(tmp_path, monkeypatch):
     monkeypatch.setattr(spustac, "TMP_DIR", tmp)
     spustac._cesty_do_suboru(["a"])
     assert not stary.exists() and cerstvy.exists() and cudzi.exists()   # cudzie súbory sa nikdy nemažú
+
+
+def test_priamo_spustana_aplikacia_sa_nekopiruje(tmp_path):
+    from nc_nastroje.katalog import App
+    exe = tmp_path / "Lupa" / "Lupa.exe"
+    app = App(id="lupa", nazov="Lupa", typ="exe", spustit=str(exe))
+    assert spustac.priecinok_aplikacie(app) == exe.parent
+    assert spustac.zostav_prikaz(app, ["C:/x"])[0] == str(exe)
+    ok, sprava = spustac.spusti(app)                                      # súbor neexistuje
+    assert not ok and "chýba" in sprava
