@@ -1,5 +1,14 @@
 # Čo je nové
 
+## 2026.11.24-7
+- Fáza 7 – zobrazenie B (Zobraziť → Zoznam + detail): zoznam aplikácií vľavo, vpravo detail vybranej aplikácie
+  s tromi kartami (z riadkov stavu), posledné záznamy (ak ich aplikácia vráti) a tlačidlá Priečinok, Log,
+  Čo je nové, Nápoveda. Pole zákazky je vľavo hore; ťahanie súborov, menu aj stavy fungujú rovnako ako v dlaždiciach.
+- Tmavý režim (Zobraziť → Tmavý režim): prepína sa hneď, bez reštartu; kontrast textu min. 4.5:1.
+- Voľba zobrazenia a režimu sa pamätá.
+- Nový voliteľný kľúč `log` v apps.json (cesta k logu aplikácie pre tlačidlo Log).
+- Pozn.: hlavné menu okna (Súbor, Zobraziť…) má farbu Windows a v tmavom režime ostáva svetlé.
+
 ## 2026.11.24-6
 - Fáza 6 – rýchle akcie: pole „Číslo zákazky / výkresu“ nájde priečinok zákazky na L: (Enter alebo Otvoriť L:),
   Otvoriť R: otvorí rovnakú cestu na R:, Hľadať v Lupe otvorí Lupu s hľadaným textom.

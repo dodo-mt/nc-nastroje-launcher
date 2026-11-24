@@ -31,6 +31,7 @@ class App:
     url_hladat: str = ""
     url_cesta: str = ""
     tlacidlo: str = "Spustiť"   # text hlavného tlačidla (Spustiť / Otvoriť)
+    log: str = ""               # cesta k logu aplikácie (premenné prostredia sa rozbalia, relatívna ku koreňu nástrojov)
     pozastavit: bool = False    # dlaždica má tlačidlo Pozastaviť (Triedič NC)
 
 

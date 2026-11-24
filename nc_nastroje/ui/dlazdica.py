@@ -11,19 +11,15 @@ from PIL import Image, ImageOps, ImageTk
 from ..config import IKONY_DIR
 from ..katalog import App
 from ..stavy import Stav
-from .tema import FONT, STAVY, SVETLA, Tooltip
+from .tema import FONT, STAVY, PALETA, Tooltip
 
 MAX_CIPOV = 8
-SIVA_KARTA = "#F7F7F7"      # pozadie nekompatibilnej dlaždice
-SIVY_TEXT = "#A9AEB3"       # zámerne nízky kontrast – dlaždica „nie je na výber“
-SIVA_BODKA = "#C8CCD0"
-SIVY_OKRAJ = "#ECECEC"
 IKONA_PX = 44
 
 
 class Dlazdica(tk.Frame):
     def __init__(self, rodic, app: App, pri_spusteni, pri_menu, pri_pozastaveni=None):
-        t = SVETLA
+        t = PALETA
         super().__init__(rodic, bg=t["karta"], highlightthickness=0)
         self.app = app
         self._pri_spusteni = pri_spusteni
@@ -125,6 +121,9 @@ class Dlazdica(tk.Frame):
         if self._pri_pozastaveni:
             self._pri_pozastaveni(self.app)
 
+    def nastav_aktualizaciu(self, akt):
+        """Stav aktualizácie aplikácie (dlaždica ho ukazuje cez verziu a stav, nič navyše nepotrebuje)."""
+
     def nastav_verziu(self, text: str):
         """Text vľavo dole: `v 2026.11.24-1`, `v 2026.11.19-1 → 11.24-1`, `web`."""
         self._verzia_lbl.configure(text=text)
@@ -142,7 +141,7 @@ class Dlazdica(tk.Frame):
         self._cipy = list(cipy)
         for w in self._cipy_ram.winfo_children():
             w.destroy()
-        t = SVETLA
+        t = PALETA
         for i, (text, stav) in enumerate(cipy):
             c = tk.Frame(self._cipy_ram, bg=t["pozadie"], highlightbackground=t["okraj"], highlightthickness=1)
             c.grid(row=i // 4, column=i % 4, sticky="w", padx=(0, 6), pady=(0, 4))
@@ -168,8 +167,8 @@ class Dlazdica(tk.Frame):
 
     def _aplikuj_farby(self):
         """Prefarbí widgety podľa stavu ťahania; pôvodné farby si pamätá pri prvom stretnutí."""
-        t = SVETLA
-        nove_pozadie = {"nad": t["pruh"], "siva": SIVA_KARTA}.get(self._dnd)
+        t = PALETA
+        nove_pozadie = {"nad": t["pruh"], "siva": t["siva_karta"]}.get(self._dnd)
         sivy = self._dnd == "siva"
         for w in [self, *self._tk_widgety()]:
             po = self._povodne.setdefault(w, {"bg": w.cget("bg"),
@@ -177,7 +176,7 @@ class Dlazdica(tk.Frame):
             bg = nove_pozadie if (nove_pozadie and po["bg"] == t["karta"]) else po["bg"]
             w.configure(bg=bg)
             if po["fg"] is not None:
-                w.configure(fg=SIVY_TEXT if sivy else po["fg"])
+                w.configure(fg=t["siva_text"] if sivy else po["fg"])
         self._povodne = {w: v for w, v in self._povodne.items() if w.winfo_exists()}
         self._ikona_lbl.configure(image=(self._ikona_siva if sivy and self._ikona_siva else self._ikona))
         for b, povolene in self._ttk_tlacidla:
@@ -185,14 +184,14 @@ class Dlazdica(tk.Frame):
 
     def _vykresli_stav_a_riadky(self):
         farba, predvoleny = STAVY.get(self._stav.stav, STAVY["nezname"])
-        self._bodka.itemconfigure(self._bodka_id, fill=SIVA_BODKA if self._dnd == "siva" else farba)
+        self._bodka.itemconfigure(self._bodka_id, fill=PALETA["siva_bodka"] if self._dnd == "siva" else farba)
         self._stav_text.configure(text=self._stav.text or predvoleny)
         nad = self._dnd == "nad" and self._dnd_riadky
         riadky = self._dnd_riadky if nad else self._stav.riadky
         for i, lbl in enumerate(self._riadky):
             lbl.configure(text=riadky[i] if i < len(riadky) else "")
         if nad:   # „Pustiť sem → …“ tučne modrou
-            self._riadky[0].configure(font=(FONT, 10, "bold"), fg=SVETLA["akcent"])
+            self._riadky[0].configure(font=(FONT, 10, "bold"), fg=PALETA["akcent"])
         else:
             self._riadky[0].configure(font=(FONT, 10))
 
@@ -202,14 +201,14 @@ class Dlazdica(tk.Frame):
         c.delete("all")
         if w < 8 or h < 8:
             return
-        akcent = SVETLA["akcent"]
+        akcent = PALETA["akcent"]
         if self._dnd == "kompatibilna":
             c.create_rectangle(2, 2, w - 3, h - 3, outline=akcent, width=2, dash=(6, 4))
         elif self._dnd == "nad":
             c.create_rectangle(2, 2, w - 3, h - 3, outline=akcent, width=2)
         else:
             c.create_rectangle(0, 0, w - 1, h - 1,
-                               outline=SIVY_OKRAJ if self._dnd == "siva" else SVETLA["okraj"], width=1)
+                               outline=PALETA["siva_okraj"] if self._dnd == "siva" else PALETA["okraj"], width=1)
 
     def _prekresli(self):
         self._aplikuj_farby()

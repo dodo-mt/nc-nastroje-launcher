@@ -48,6 +48,11 @@ python nastroje/publikuj.py launcher C:\build\nc_nastroje --verzia 2026.11.25-1
 Bez `--koren` sa použije koreň z nastavení (pri vývoji falošný `test_data\L\_Nastroje`). Pri skutočnom koreni
 sa skript opýta na potvrdenie. Záznam aplikácie musí v `apps.json` už existovať (`launcher` tiež).
 
+## Voliteľné kľúče záznamu aplikácie v `apps.json`
+
+- `log` – cesta k logu aplikácie (súbor alebo priečinok) pre tlačidlo Log v zobrazení B. Premenné prostredia sa
+  rozbalia (`%LOCALAPPDATA%\TNC_Sync\logy`), relatívna cesta je ku koreňu nástrojov. Bez neho je tlačidlo neaktívne.
+
 ## Štartér a zástupcovia (fáza 5)
 
 Zástupcovia v „Po spustení“, „Odoslať do“ a na ploche nemieria priamo na `nc_nastroje.exe`, ale (v zostavenom exe)

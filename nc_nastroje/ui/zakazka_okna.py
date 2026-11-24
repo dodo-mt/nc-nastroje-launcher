@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from ..zakazky import Zhoda
-from .tema import FONT, SVETLA, Tooltip, centruj
+from .tema import FONT, PALETA, Tooltip, centruj, farby_zoznamu
 
 
 class VyberZakazky(tk.Toplevel):
@@ -18,7 +18,7 @@ class VyberZakazky(tk.Toplevel):
         telo.pack(fill="both", expand=True)
         ttk.Label(telo, text=f"Nájdených je {len(zhody)} zhôd – ktorú otvoriť na {kde}?", font=(FONT, 11)).pack(anchor="w", pady=(0, 8))
         self._zoznam = tk.Listbox(telo, height=min(max(len(zhody), 3), 12), width=70, font=(FONT, 10),
-                                  activestyle="none", exportselection=False)
+                                  activestyle="none", exportselection=False, **farby_zoznamu())
         for z in zhody:
             self._zoznam.insert("end", f"{z.zakazka}   ·   {z.zakaznik}" + ("   (staré značenie)" if z.stara else ""))
         self._zoznam.pack(fill="both", expand=True)
@@ -57,7 +57,7 @@ class NenaslaZakazku(tk.Toplevel):
         telo.pack(fill="both", expand=True)
         ttk.Label(telo, text=f"Zákazka „{text}“ sa na L:\\ nenašla.", font=(FONT, 11)).pack(anchor="w")
         ttk.Label(telo, text="Môže byť pod iným číslom alebo ešte nie je založená. Skús ju nájsť v Lupe.",
-                  foreground=SVETLA["text2"]).pack(anchor="w", pady=(4, 12))
+                  foreground=PALETA["text2"]).pack(anchor="w", pady=(4, 12))
         tl = ttk.Frame(telo)
         tl.pack(fill="x")
         if lupa_dostupna:

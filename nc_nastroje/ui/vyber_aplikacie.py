@@ -5,7 +5,7 @@ from tkinter import ttk
 
 from .. import dnd
 from ..katalog import App
-from .tema import FONT, SVETLA, centruj
+from .tema import FONT, PALETA, centruj
 
 
 def kompatibilne_aplikacie(apps: list[App], cesty: list[str]) -> tuple[list[App], list[str]]:
@@ -31,7 +31,7 @@ class VyberAplikacie(tk.Toplevel):
                            command=lambda a=a: self._vyber(a, pri_vybere, cesty)).pack(pady=3)
         else:
             ttk.Label(telo, text=f"Žiadna aplikácia neprijíma {popis}.", font=(FONT, 11),
-                      foreground=SVETLA["text2"]).pack(anchor="w", pady=(0, 10))
+                      foreground=PALETA["text2"]).pack(anchor="w", pady=(0, 10))
         zrusit = ttk.Button(telo, text="Zrušiť", command=self.destroy)
         zrusit.pack(pady=(10, 0))
         self.bind("<Escape>", lambda e: self.destroy())

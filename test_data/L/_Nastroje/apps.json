@@ -76,6 +76,7 @@
         "cesta": "_stav\\nastrojovy_list"
       },
       "co_je_nove": "nastrojovy_list\\CO_JE_NOVE.md",
+      "log": "_stav\\nastrojovy_list",
       "typ": "python",
       "zdroj": "nastrojovy_list\\2026.11.24-1",
       "spustit": "fiktivna_app.py",

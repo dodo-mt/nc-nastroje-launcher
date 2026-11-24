@@ -4,7 +4,7 @@ from tkinter import ttk
 
 from ..config import PROJEKT
 from ..verzia import VERZIA
-from .tema import FONT, centruj
+from .tema import FONT, centruj, farby_zoznamu
 
 NAPOVEDA = """NC Nástroje – spúšťač firemných aplikácií
 
@@ -21,6 +21,9 @@ Dvojklik na ikonu v oblasti oznámení otvorí okno.
 Zákazka: do poľa hore napíš číslo (napr. 21930, OD21930, OD00021930 alebo starú 001252, OD626/001252)
 a stlač Enter (otvorí priečinok na L:) alebo tlačidlo Otvoriť R: / Hľadať v Lupe.
 
+Zobrazenie: Zobraziť → Dlaždice alebo Zoznam + detail. Zobraziť → Tmavý režim.
+V zozname klikni na aplikáciu, vpravo uvidíš jej detail. Pravé tlačidlo = ďalšie akcie.
+
 Klávesy:
   F1        Nápoveda
   F5        Obnoviť
@@ -33,7 +36,8 @@ def _okno(rodic, titul, text, mono=False):
     o = tk.Toplevel(rodic)
     o.title(titul)
     o.transient(rodic)
-    t = tk.Text(o, width=80, height=24, wrap="word", font=("Consolas", 10) if mono else (FONT, 10), padx=12, pady=10)
+    t = tk.Text(o, width=80, height=24, wrap="word", font=("Consolas", 10) if mono else (FONT, 10), padx=12, pady=10,
+                **farby_zoznamu())
     t.insert("1.0", text)
     t.configure(state="disabled")
     t.pack(fill="both", expand=True)

@@ -33,7 +33,7 @@ APLIKACIE = [
     dict(id="nastrojovy_list", nazov="Nástrojový list", popis="Z .pof súborov hyperMILL", verzia="2026.11.24-1",
          ikona="nastrojovy_list.png", farba="#0B7A55", prijima=[".pof", "priecinok"],
          stav={"adapter": "subor_json", "cesta": "_stav\\nastrojovy_list"},
-         co_je_nove="nastrojovy_list\\CO_JE_NOVE.md"),
+         co_je_nove="nastrojovy_list\\CO_JE_NOVE.md", log="_stav\\nastrojovy_list"),
     dict(id="programovy_list", nazov="Programový list", popis="Nákresy upnutia → Excel + PDF", verzia="2026.11.20-1",
          ikona="programovy_list.png", farba="#C4244B", prijima=[".png", ".jpg", ".xlsx", "priecinok"]),
     dict(id="nc_editor", nazov="NC Editor", popis="Úprava a porovnanie programov", verzia="2026.11.22-1",
@@ -56,7 +56,9 @@ def stavove_subory():
     iso = lambda dt: dt.isoformat(timespec="seconds")  # noqa: E731
     # subor_json – Nástrojový list
     _zapis(KOREN / "L" / "_Nastroje" / "_stav" / "nastrojovy_list" / "PC-PROG1.json", {
-        "stav": "ok", "riadky": ["Posledné spustenie: dnes", "Vygenerované listy: 12"],
+        "stav": "ok", "riadky": ["Posledné spustenie: dnes", "Vygenerované listy: 12", "Chyby dnes: 0"],
+        "log": ["11:32 OD00021930 Op10-30 -> HTML + PDF", "11:31 OD00021931 Op10 -> HTML",
+                "11:30 OD00000626 Op10-20 -> HTML + PDF", "11:28 OD00021930 chýba .pof v POF2 (preskočené)"],
         "cipy": [{"text": "HTML", "stav": "ok"}, {"text": "PDF", "stav": "upozornenie"}],
         "cas": iso(teraz - timedelta(minutes=20)), "pocitac": "PC-PROG1"})
     # TNC Sync – _tnc_sync\_tnc_sync_stav.json (formát 1 zo skutočného TNC Sync)

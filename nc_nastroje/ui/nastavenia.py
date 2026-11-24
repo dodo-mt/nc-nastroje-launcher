@@ -5,7 +5,7 @@ from tkinter import filedialog, ttk
 
 from ..config import Nastavenia
 from ..katalog import App
-from .tema import FONT, Tooltip, centruj
+from .tema import FONT, PALETA, Tooltip, centruj, farby_zoznamu
 
 
 class OknoNastaveni(tk.Toplevel):
@@ -30,7 +30,8 @@ class OknoNastaveni(tk.Toplevel):
 
         telo = ttk.Frame(self, padding=16)
         telo.pack(fill="both", expand=True)
-        self._sekcie = tk.Listbox(telo, exportselection=False, height=4, width=16, font=(FONT, 10), activestyle="none")
+        self._sekcie = tk.Listbox(telo, exportselection=False, height=4, width=16, font=(FONT, 10), activestyle="none",
+                                  **farby_zoznamu())
         self._sekcie.grid(row=0, column=0, sticky="ns", padx=(0, 16))
         for s in ("Cesty", "Režim", "Stavy", "Windows"):
             self._sekcie.insert("end", s)
@@ -73,7 +74,7 @@ class OknoNastaveni(tk.Toplevel):
             b.grid(row=i, column=2)
             Tooltip(b, "Vybrať priečinok")
         ttk.Label(f, text="Pri vývoji používaj falošný koreň (test_data), nie skutočné L:/R:.",
-                  foreground="#555555").grid(row=3, column=0, columnspan=3, sticky="w", pady=(10, 0))
+                  foreground=PALETA["text2"]).grid(row=3, column=0, columnspan=3, sticky="w", pady=(10, 0))
         return f
 
     def _rezim(self, rodic):
@@ -110,7 +111,7 @@ class OknoNastaveni(tk.Toplevel):
                 c.grid(row=i // 2, column=i % 2, sticky="w", padx=(0, 24), pady=2)
                 Tooltip(c, f"Pridá do ponuky Odoslať do: {a.nazov}")
         else:
-            ttk.Label(ram_odoslat, text="Katalóg aplikácií ešte nie je načítaný.", foreground="#555555").grid()
+            ttk.Label(ram_odoslat, text="Katalóg aplikácií ešte nie je načítaný.", foreground=PALETA["text2"]).grid()
         return f
 
     def _prehladaj(self, kluc):

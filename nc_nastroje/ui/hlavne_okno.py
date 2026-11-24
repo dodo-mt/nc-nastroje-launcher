@@ -21,14 +21,16 @@ from ..verzia import VERZIA
 from . import napoveda
 from .dlazdica import Dlazdica
 from .nastavenia import OknoNastaveni
-from .tema import FONT, STAVY, SVETLA, Tooltip
+from . import tema
+from .pole_zakazky import PoleZakazky
+from .tema import FONT, PALETA, STAVY, Tooltip, nastav_temu, prefarbi_strom, prepni_ttk_temu
 from .vyber_aplikacie import VyberAplikacie
 from .zakazka_okna import NenaslaZakazku, OknoZakazky, VyberZakazky
+from .zoznam_detail import ZoznamDetail
 
 log = logging.getLogger(__name__)
 STLPCE_ZUZENE_POD = 1000          # px: pri užšom okne 2 stĺpce
 KATALOG_INTERVAL_MS = 10 * 60 * 1000   # kontrola nových verzií na L: každých 10 min
-OKRAJ_PRUHU = "#B9D3EE"
 PLACEHOLDER = "Číslo zákazky / výkresu  ·  Enter = otvoriť na L:"
 INDEX_PAUZA_PO_CHYBE = timedelta(minutes=10)   # neúspešný index sa nepokúša znova každých 30 s
 
@@ -49,6 +51,9 @@ class HlavneOkno(TkinterDnD.Tk):
         self._cakajuce_prikazy: list[dict] = []
         self._koniec = False
         self.nast: Nastavenia = nacitaj_nastavenia()
+        self._zobrazenie = self.nast.zobrazenie if self.nast.zobrazenie in ("A", "B") else "A"
+        self._b: ZoznamDetail | None = None          # zobrazenie B (vytvorí sa pri prvom prepnutí)
+        nastav_temu(self.nast.tmavy_rezim)           # paleta musí byť nastavená pred vytvorením widgetov
         self._index = zakazky.IndexZakaziek(Path(self.nast.koren_l))   # cache zákaziek (lokálny súbor)
         self._index_pokus = datetime.min
         self.title("NC Nástroje")
@@ -59,9 +64,9 @@ class HlavneOkno(TkinterDnD.Tk):
             self.iconphoto(True, self._ikona_okna)
         except Exception:  # noqa: BLE001 – ikona nie je dôvod nespustiť okno
             log.exception("Ikona okna sa nepodarila")
-        sv_ttk.set_theme("light")
+        sv_ttk.set_theme("dark" if self.nast.tmavy_rezim else "light")
         self.update_idletasks()  # téma cez <<ThemeChanged>> volá tk_setPalette – musí dobehnúť pred našimi farbami
-        self.configure(bg=SVETLA["pozadie"])
+        self.configure(bg=PALETA["pozadie"])
         self.dlazdice: dict[str, Dlazdica] = {}
         self.apps: list[App] = []                  # zobrazené aplikácie (po filtri režimu)
         self._stlpcov = 0
@@ -78,17 +83,21 @@ class HlavneOkno(TkinterDnD.Tk):
 
         self._postav_menu()
         self._postav_horny_riadok()
-        self._pruh_chyb = tk.Label(self, text="", bg="#FDE7E9", fg="#C42B1C", font=(FONT, 10), anchor="w", padx=12, pady=6)
+        self._kotva_hore = tk.Frame(self, height=0, bg=PALETA["pozadie"])   # zarážka: pruhy sa ukazujú pod ňou
+        self._kotva_hore.pack(fill="x")
+        self._pruh_chyb = tk.Label(self, text="", bg=PALETA["chyba_bg"], fg=PALETA["chyba_fg"], font=(FONT, 10), anchor="w", padx=12, pady=6)
         self._postav_pruh_aktualizacie()
         self._postav_pruh_dnd()
-        self.mriezka = tk.Frame(self, bg=SVETLA["pozadie"])
-        self.mriezka.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+        self._obsah = tk.Frame(self, bg=PALETA["pozadie"])      # sem sa vkladá zobrazenie A (mriežka) alebo B
+        self._obsah.pack(fill="both", expand=True)
+        self.mriezka = tk.Frame(self._obsah, bg=PALETA["pozadie"])
         self._postav_stavovy_riadok()
         self.mriezka.bind("<Configure>", lambda e: self._rozloz())
+        self._zobraz_pohlad()
 
         self.bind("<F1>", lambda e: napoveda.ukaz_napovedu(self))
         self.bind("<F5>", lambda e: self.nacitaj())  # znova načíta katalóg, aktualizácie aj stavy
-        self.bind("<Control-f>", lambda e: (self.pole.focus_set(), self.pole.selection_range(0, "end")))
+        self.bind("<Control-f>", lambda e: self.aktivne_pole().fokus())
         for i in range(1, 7):
             self.bind(f"<Control-Key-{i}>", lambda e, i=i: self._spusti_podla_poradia(i - 1))
         self._nastav_dnd()
@@ -114,10 +123,15 @@ class HlavneOkno(TkinterDnD.Tk):
         subor.add_command(label="Ukončiť", command=self.ukonci)
         m.add_cascade(label="Súbor", menu=subor)
         zobr = tk.Menu(m, tearoff=0)
-        zobr.add_radiobutton(label="Dlaždice", value="A", variable=tk.StringVar(value="A"))
-        zobr.add_radiobutton(label="Zoznam + detail (fáza 7)", state="disabled")
+        self._v_zobrazenie = tk.StringVar(value=self._zobrazenie)
+        self._v_tmava = tk.BooleanVar(value=self.nast.tmavy_rezim)
+        zobr.add_radiobutton(label="Dlaždice", value="A", variable=self._v_zobrazenie,
+                             command=lambda: self.prepni_zobrazenie("A"))
+        zobr.add_radiobutton(label="Zoznam + detail", value="B", variable=self._v_zobrazenie,
+                             command=lambda: self.prepni_zobrazenie("B"))
         zobr.add_separator()
-        zobr.add_checkbutton(label="Tmavý režim (fáza 7)", state="disabled")
+        zobr.add_checkbutton(label="Tmavý režim", variable=self._v_tmava,
+                             command=lambda: self.prepni_temu(self._v_tmava.get()))
         m.add_cascade(label="Zobraziť", menu=zobr)
         nap = tk.Menu(m, tearoff=0)
         nap.add_command(label="Nápoveda", accelerator="F1", command=lambda: napoveda.ukaz_napovedu(self))
@@ -127,16 +141,14 @@ class HlavneOkno(TkinterDnD.Tk):
         self.config(menu=m)
 
     def _postav_horny_riadok(self):
-        r = tk.Frame(self, bg=SVETLA["pozadie"])
+        r = tk.Frame(self, bg=PALETA["pozadie"])
         r.pack(fill="x", padx=20, pady=(16, 12))
         self._horny_riadok = r
         r.columnconfigure(0, weight=1)
-        self.pole = ttk.Entry(r, font=(FONT, 12))
+        self.pole = PoleZakazky(r, lambda: self.rychla_akcia("L"), PLACEHOLDER)
         self.pole.grid(row=0, column=0, sticky="ew", ipady=4, padx=(0, 12))
         self._pole_tip = Tooltip(self.pole, "")
-        self._nastav_placeholder()
         self._aktualizuj_tip_indexu()
-        self.pole.bind("<Return>", lambda e: self.rychla_akcia("L"))     # Enter = otvoriť na L:
         for i, (text, akcia, tip, styl) in enumerate([
             ("Otvoriť L:", "L", "Nájde priečinok zákazky a otvorí ho na L:\\ (Enter)", "TButton"),
             ("Otvoriť R:", "R", "Otvorí rovnakú cestu na R:\\ (programy na nahratie do strojov)", "TButton"),
@@ -147,35 +159,22 @@ class HlavneOkno(TkinterDnD.Tk):
             Tooltip(b, tip)
 
     # ---------- rýchle akcie: pole zákazky ----------
-    def _nastav_placeholder(self):
-        self._placeholder = True
-        self.pole.insert(0, PLACEHOLDER)
-        self.pole.configure(foreground=SVETLA["text2"])
-        self.pole.bind("<FocusIn>", self._pole_fokus_dnu, add="+")
-        self.pole.bind("<FocusOut>", self._pole_fokus_von, add="+")
-
-    def _pole_fokus_dnu(self, _e=None):
-        if self._placeholder:
-            self.pole.delete(0, "end")
-            self.pole.configure(foreground=SVETLA["text"])
-            self._placeholder = False
-
-    def _pole_fokus_von(self, _e=None):
-        if not self.pole.get().strip():
-            self.pole.delete(0, "end")
-            self.pole.insert(0, PLACEHOLDER)
-            self.pole.configure(foreground=SVETLA["text2"])
-            self._placeholder = True
+    def aktivne_pole(self) -> PoleZakazky:
+        """Pole zákazky v práve zobrazenom pohľade (A: horný riadok, B: ľavý panel)."""
+        return self._b.pole if self._zobrazenie == "B" and self._b else self.pole
 
     def _pole_text(self) -> str:
-        return "" if self._placeholder else self.pole.get().strip()
+        return self.aktivne_pole().text()
 
     def _aktualizuj_tip_indexu(self):
         index = self._index
         stav = (f"Index zákaziek: {index.pocet} zákaziek, obnovený {index.cas:%d.%m.%Y %H:%M}"
                 if index.cas else "Index zákaziek sa ešte nestaval (hľadá sa priamym prechodom)")
-        self._pole_tip.text = ("Číslo zákazky / výkresu – napr. 21930, OD21930, OD00021930 alebo OD626\\001252 "
-                               f"(Ctrl+F, Enter = otvoriť na L:)\n{stav}")
+        text = ("Číslo zákazky / výkresu – napr. 21930, OD21930, OD00021930 alebo OD626\\001252 "
+                f"(Ctrl+F, Enter = otvoriť na L:)\n{stav}")
+        self._pole_tip.text = text
+        if self._b:
+            self._b.pole_tip.text = text
 
     def rychla_akcia(self, akcia: str, text: str | None = None):
         """akcia: L (otvoriť na L:) | R (rovnaká cesta na R:) | lupa. Hľadanie beží na pozadí, UI nečaká na sieť."""
@@ -185,7 +184,7 @@ class HlavneOkno(TkinterDnD.Tk):
             return
         if not text:
             self._upozorni("Zadaj číslo zákazky alebo výkresu (napr. 21930 alebo OD00021930).")
-            self.pole.focus_set()
+            self.aktivne_pole().focus_set()
             return
         dotaz = zakazky.normalizuj(text)
         if dotaz is None:
@@ -286,49 +285,49 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def _postav_pruh_aktualizacie(self):
         """Modrý pruh „Na L:\\_Nastroje je nová verzia: … Aktualizuje sa pri ďalšom spustení.“"""
-        bg = SVETLA["pruh"]
-        self._pruh_akt = tk.Frame(self, bg=bg, highlightbackground=OKRAJ_PRUHU, highlightthickness=1)
-        tk.Label(self._pruh_akt, text="↓", font=(FONT, 13, "bold"), bg=bg, fg=SVETLA["akcent"]).pack(
+        bg = PALETA["pruh"]
+        self._pruh_akt = tk.Frame(self, bg=bg, highlightbackground=PALETA["okraj_pruhu"], highlightthickness=1)
+        tk.Label(self._pruh_akt, text="↓", font=(FONT, 13, "bold"), bg=bg, fg=PALETA["akcent"]).pack(
             side="left", padx=(14, 8), pady=8)
-        self._akt_pre = tk.Label(self._pruh_akt, font=(FONT, 11), bg=bg, fg=SVETLA["text"], padx=0)
+        self._akt_pre = tk.Label(self._pruh_akt, font=(FONT, 11), bg=bg, fg=PALETA["text"], padx=0)
         self._akt_pre.pack(side="left")
-        self._akt_tucne = tk.Label(self._pruh_akt, font=(FONT, 11, "bold"), bg=bg, fg=SVETLA["text"], padx=0)
+        self._akt_tucne = tk.Label(self._pruh_akt, font=(FONT, 11, "bold"), bg=bg, fg=PALETA["text"], padx=0)
         self._akt_tucne.pack(side="left")
-        self._akt_po = tk.Label(self._pruh_akt, font=(FONT, 11), bg=bg, fg=SVETLA["text"], padx=0)
+        self._akt_po = tk.Label(self._pruh_akt, font=(FONT, 11), bg=bg, fg=PALETA["text"], padx=0)
         self._akt_po.pack(side="left")
         self._akt_tlacidlo = ttk.Button(self._pruh_akt, text="Aktualizovať teraz", command=self._aktualizuj_teraz)
         self._akt_tlacidlo.pack(side="right", padx=(10, 12), pady=6)
         Tooltip(self._akt_tlacidlo, "Skontroluje L:\\_Nastroje a skopíruje nové verzie hneď "
                                     "(pri novej verzii launchera ho reštartuje)")
         odkaz = tk.Label(self._pruh_akt, text="Čo je nové", font=(FONT, 11, "underline"), bg=bg,
-                         fg=SVETLA["akcent"], cursor="hand2")
+                         fg=PALETA["akcent"], cursor="hand2")
         odkaz.pack(side="right", padx=(10, 0))
         odkaz.bind("<Button-1>", lambda e: self._ukaz_co_je_nove_pruhu())
         Tooltip(odkaz, "Zobrazí, čo je v novej verzii nové")
 
     def _postav_pruh_dnd(self):
         """Horný pruh: počas ťahania „Ťaháš N súborov…“, po zlom pustení krátke upozornenie."""
-        self._pruh_dnd = tk.Frame(self, bg=SVETLA["karta"], highlightbackground=SVETLA["okraj"], highlightthickness=1)
-        self._pruh_sipka = tk.Label(self._pruh_dnd, text="↓", font=(FONT, 13, "bold"), bg=SVETLA["karta"], fg=SVETLA["akcent"])
+        self._pruh_dnd = tk.Frame(self, bg=PALETA["karta"], highlightbackground=PALETA["okraj"], highlightthickness=1)
+        self._pruh_sipka = tk.Label(self._pruh_dnd, text="↓", font=(FONT, 13, "bold"), bg=PALETA["karta"], fg=PALETA["akcent"])
         self._pruh_sipka.pack(side="left", padx=(14, 8), pady=8)
-        self._pruh_text = tk.Label(self._pruh_dnd, text="", font=(FONT, 11), bg=SVETLA["karta"], fg=SVETLA["text"], anchor="w")
+        self._pruh_text = tk.Label(self._pruh_dnd, text="", font=(FONT, 11), bg=PALETA["karta"], fg=PALETA["text"], anchor="w")
         self._pruh_text.pack(side="left", fill="x", expand=True)
-        self._pruh_esc = tk.Label(self._pruh_dnd, text="Esc = zrušiť", font=(FONT, 10), bg=SVETLA["karta"], fg=SVETLA["text2"])
+        self._pruh_esc = tk.Label(self._pruh_dnd, text="Esc = zrušiť", font=(FONT, 10), bg=PALETA["karta"], fg=PALETA["text2"])
         self._pruh_esc.pack(side="right", padx=14)
 
     def _postav_stavovy_riadok(self):
-        s = tk.Frame(self, bg=SVETLA["pozadie"], highlightbackground=SVETLA["okraj"], highlightthickness=1)
+        s = tk.Frame(self, bg=PALETA["pozadie"], highlightbackground=PALETA["okraj"], highlightthickness=1)
         s.pack(side="bottom", fill="x")
         self._disky = {}
         for pismeno in ("L", "R"):
-            bodka = tk.Label(s, text="●", bg=SVETLA["pozadie"], fg=STAVY["nezname"][0], font=(FONT, 9))
+            bodka = tk.Label(s, text="●", bg=PALETA["pozadie"], fg=STAVY["nezname"][0], font=(FONT, 9))
             bodka.pack(side="left", padx=(20 if pismeno == "L" else 12, 3), pady=6)
-            text = tk.Label(s, text=pismeno + ":\\ …", bg=SVETLA["pozadie"], fg=SVETLA["text2"], font=(FONT, 9))
+            text = tk.Label(s, text=pismeno + ":\\ …", bg=PALETA["pozadie"], fg=PALETA["text2"], font=(FONT, 9))
             text.pack(side="left")
             self._disky[pismeno] = (bodka, text)
-        self._rezim = tk.Label(s, bg=SVETLA["pozadie"], fg=SVETLA["text2"], font=(FONT, 9))
+        self._rezim = tk.Label(s, bg=PALETA["pozadie"], fg=PALETA["text2"], font=(FONT, 9))
         self._rezim.pack(side="left", padx=20, pady=6)
-        self._zdroj_text = tk.Label(s, bg=SVETLA["pozadie"], fg=SVETLA["text2"], font=(FONT, 9))
+        self._zdroj_text = tk.Label(s, bg=PALETA["pozadie"], fg=PALETA["text2"], font=(FONT, 9))
         self._zdroj_text.pack(side="right", padx=20)
         self._aktualizuj_rezim()
         self._aktualizuj_zdroj_text()
@@ -352,6 +351,80 @@ class HlavneOkno(TkinterDnD.Tk):
         self.obnov_katalog()
         self.obnov_stavy()
 
+    # ---------- zobrazenie A / B a tmavý režim ----------
+    def _zobraz_pohlad(self):
+        """Vloží do okna zobrazenie A (horný riadok + mriežka dlaždíc) alebo B (zoznam + detail)."""
+        if self._zobrazenie == "B":
+            if self._b is None:
+                self._b = ZoznamDetail(self._obsah, self)
+                self._aktualizuj_tip_indexu()
+            self._horny_riadok.pack_forget()
+            self.mriezka.pack_forget()
+            self._b.pack(fill="both", expand=True)
+        else:
+            if self._b:
+                self._b.pack_forget()
+            self._horny_riadok.pack(fill="x", padx=20, pady=(16, 12), before=self._kotva_hore)
+            self.mriezka.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+
+    def _uloz_nastavenia_ticho(self):
+        try:
+            uloz_nastavenia(self.nast)
+        except OSError:
+            log.exception("Nastavenia sa nepodarilo uložiť")
+
+    def prepni_zobrazenie(self, zobrazenie: str):
+        """A = dlaždice, B = zoznam + detail. Voľba sa pamätá."""
+        if zobrazenie not in ("A", "B") or zobrazenie == self._zobrazenie:
+            return
+        self._zobrazenie = zobrazenie
+        self._v_zobrazenie.set(zobrazenie)
+        self.nast.zobrazenie = zobrazenie
+        self._uloz_nastavenia_ticho()
+        self._zobraz_pohlad()
+        self._postav_dlazdice(self.apps)           # prezentéry nového zobrazenia, stavy sa doplnia z pamäte
+
+    def prepni_temu(self, tmava: bool):
+        """Svetlý / tmavý režim za behu: ttk cez sv_ttk, naše tk widgety prefarbením, prezentéry sa postavia nanovo."""
+        self._v_tmava.set(tmava)
+        if tmava == self.nast.tmavy_rezim and tmava == tema.je_tmava():
+            return
+        self.nast.tmavy_rezim = tmava
+        self._uloz_nastavenia_ticho()
+        mapa = nastav_temu(tmava)
+        prepni_ttk_temu(self, tmava)               # sv_ttk bez tk_setPalette (ten by prebil naše farby)
+        self.configure(bg=PALETA["pozadie"])
+        prefarbi_strom(self, mapa)
+        self.pole.prefarbi()
+        if self._b:
+            self._b.prefarbi()
+        self._postav_dlazdice(self.apps)
+
+    # ---------- akcie detailu (zobrazenie B) ----------
+    def otvor_log(self, app: App | None):
+        """Log aplikácie: cesta z `log` v apps.json (premenné prostredia sa rozbalia, relatívna ku koreňu nástrojov)."""
+        if app is None or not app.log:
+            self._upozorni("Aplikácia neuvádza log v apps.json (kľúč „log“).")
+            return
+        cesta = Path(os.path.expandvars(app.log))
+        if not cesta.is_absolute():
+            cesta = Path(self.nast.koren_nastrojov) / cesta
+        try:
+            os.startfile(str(cesta))
+        except OSError as e:
+            log.exception("Otvorenie logu %s zlyhalo", cesta)
+            self._upozorni(f"Log sa nepodarilo otvoriť: {e.strerror or e}")
+
+    def ukaz_co_je_nove_app(self, app: App | None):
+        text = aktualizacie.precitaj_co_je_nove(app.id) if app and app.typ != "web" else None
+        if not text:
+            self._upozorni("Aplikácia nemá zverejnené poznámky Čo je nové.")
+            return
+        napoveda.ukaz_text(self, f"Čo je nové – {app.nazov}", text)
+
+    def ukaz_napovedu(self):
+        napoveda.ukaz_napovedu(self)
+
     def _filtruj(self, apps: list[App]) -> list[App]:
         if self.nast.rezim == "prezeranie":
             return [a for a in apps if not a.len_plny_rezim]
@@ -372,18 +445,23 @@ class HlavneOkno(TkinterDnD.Tk):
         if chyby:
             self._pruh_chyb.configure(text="  " + " | ".join(chyby))
             if not self._pruh_chyb.winfo_ismapped():
-                self._pruh_chyb.pack(fill="x", padx=20, pady=(0, 12), before=self.mriezka)
+                self._pruh_chyb.pack(fill="x", padx=20, pady=(0, 12), before=self._obsah)
         else:
             self._pruh_chyb.pack_forget()
 
     def _postav_dlazdice(self, apps: list[App]):
+        """Vytvorí prezentéry aplikácií pre aktuálne zobrazenie: dlaždice (A) alebo riadky zoznamu (B).
+        Oba majú rovnaké rozhranie, takže stavy, verzie, ťahanie súborov aj menu fungujú rovnako."""
         self.apps = apps
         for d in self.dlazdice.values():
             d.destroy()
-        self.dlazdice = {a.id: Dlazdica(self.mriezka, a, self.spusti, self._menu_dlazdice, self._prepni_pozastavenie)
-                         for a in apps}
-        self._stlpcov = 0
-        self._rozloz()
+        if self._zobrazenie == "B" and self._b:
+            self.dlazdice = self._b.postav(apps, self.spusti, self._menu_dlazdice)
+        else:
+            self.dlazdice = {a.id: Dlazdica(self.mriezka, a, self.spusti, self._menu_dlazdice, self._prepni_pozastavenie)
+                             for a in apps}
+            self._stlpcov = 0
+            self._rozloz()
         self._prekresli_aktualizacie()          # verzie, stavy (posledné známe) a pruh
 
     def obnov_katalog(self):
@@ -461,6 +539,7 @@ class HlavneOkno(TkinterDnD.Tk):
         for id_, d in self.dlazdice.items():
             d.nastav_verziu(self._text_verzie(d.app))
             d.nastav_pozastaveny(ovladanie.je_pozastaveny(id_))
+            d.nastav_aktualizaciu(self._aktual.get(id_))
             d.nastav_stav(self._stav_pre(id_))
             akt = self._aktual.get(id_)
             if akt and akt.stav == "chyba":
@@ -488,7 +567,7 @@ class HlavneOkno(TkinterDnD.Tk):
         self._akt_tucne.configure(text=tucne)
         self._akt_po.configure(text=po)
         if not self._pruh_akt.winfo_ismapped():
-            self._pruh_akt.pack(fill="x", padx=20, pady=(0, 12), after=self._horny_riadok)
+            self._pruh_akt.pack(fill="x", padx=20, pady=(0, 12), after=self._kotva_hore)
 
     def _ukaz_co_je_nove_pruhu(self):
         la, casti = self._launcher_akt, []
@@ -544,6 +623,8 @@ class HlavneOkno(TkinterDnD.Tk):
             text.configure(text=pismeno + ":\\ " + ("pripojený" if ok else "nedostupný"))
 
     def _rozloz(self):
+        if self._zobrazenie != "A":
+            return
         stlpcov = 2 if self.winfo_width() < STLPCE_ZUZENE_POD else 3
         if stlpcov == self._stlpcov and self.dlazdice and self.mriezka.grid_slaves():
             return
@@ -641,10 +722,10 @@ class HlavneOkno(TkinterDnD.Tk):
         return COPY
 
     def _ukaz_pruh(self, text: str, esc: bool, upozornenie: bool = False):
-        bg, fg = ("#FFF4CE", "#5A4400") if upozornenie else (SVETLA["karta"], SVETLA["text"])
+        bg, fg = (PALETA["var_bg"], PALETA["var_fg"]) if upozornenie else (PALETA["karta"], PALETA["text"])
         self._pruh_dnd.configure(bg=bg)
-        for w, f in ((self._pruh_sipka, SVETLA["akcent"] if not upozornenie else fg), (self._pruh_text, fg),
-                     (self._pruh_esc, SVETLA["text2"] if not upozornenie else fg)):
+        for w, f in ((self._pruh_sipka, PALETA["akcent"] if not upozornenie else fg), (self._pruh_text, fg),
+                     (self._pruh_esc, PALETA["text2"] if not upozornenie else fg)):
             w.configure(bg=bg, fg=f)
         self._pruh_sipka.configure(text="!" if upozornenie else "↓")
         self._pruh_text.configure(text=text)
@@ -653,7 +734,7 @@ class HlavneOkno(TkinterDnD.Tk):
         else:
             self._pruh_esc.pack_forget()
         if not self._pruh_dnd.winfo_ismapped():
-            self._pruh_dnd.pack(fill="x", padx=20, pady=(0, 12), before=self.mriezka)
+            self._pruh_dnd.pack(fill="x", padx=20, pady=(0, 12), before=self._obsah)
 
     def _skry_pruh(self):
         if self._pruh_id:
