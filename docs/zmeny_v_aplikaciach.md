@@ -59,6 +59,8 @@ Pri bežnom počte súborov sa cesty odovzdávajú priamo ako argumenty (bez `@`
 
 ## Lupa: hľadaný text z príkazového riadku (`--hladat`)
 
+**HOTOVÉ (Lupa 1.5.1, 24.11.2026):** Lupa prijíma `--hladat <text>` a v `apps.json` je `"argumenty_hladat": "--hladat {text}"`.
+
 Tlačidlo „Hľadať v Lupe“ a pole zákazky dnes Lupu len otvoria (text sa skopíruje do schránky). Aby sa hľadanie vykonalo
 samo, Lupa (`NC Lupa/app.py`) má pri štarte prečítať argument:
 

@@ -130,7 +130,8 @@
       "stav": {
         "adapter": "lupa_sken",
         "cesta": "_Nastroje\\lupa"
-      }
+      },
+      "argumenty_hladat": "--hladat {text}"
     },
     {
       "id": "tnc_sync",
