@@ -73,3 +73,9 @@ nová inštancia správne zachovala podľa toho, ako to Lupa rieši dnes.
 Keď to Lupa vie, v `L:\_Nastroje\apps.json` sa pri `lupa` doplní len:
 `"argumenty_hladat": "--hladat {text}"` – launcher potom text odovzdá priamo (schránka sa už nepoužije).
 Rovnako sa dá neskôr dopísať `--cesta <priečinok>` a `prijima: ["priecinok"]` pre ťahanie priečinka na dlaždicu.
+
+## TNC Sync: prevzatie priečinka zákazky (`Heidenhain-Auto-Backup`)
+
+Dlaždica TNC Sync má zatiaľ `prijima: []` (nič sa na ňu nepustí), lebo `tnc_sync.py` neprijíma argumenty s cestami (argparse
+by skončil chybou). Keď sa to doplní – nepovinný `cesty` (nargs="*") a otvorenie Prehľadu lokálnych programov danej zákazky –
+stačí v `apps.json` vrátiť `"prijima": ["priecinok"]` a `"argumenty": "{cesty}"`.

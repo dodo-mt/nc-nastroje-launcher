@@ -123,10 +123,7 @@
       "spustit": "tnc_sync.exe",
       "ikona": "tnc_sync.png",
       "farba": "#005FB8",
-      "prijima": [
-        "priecinok"
-      ],
-      "argumenty": "{cesty}",
+      "prijima": [],
       "stav": {
         "adapter": "tnc_sync"
       }
