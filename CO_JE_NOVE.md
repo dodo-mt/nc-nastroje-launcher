@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.25-27
+- Dlaždice už nie sú zbytočne vysoké: každý rad mriežky má výšku podľa svojej najvyššej dlaždice (predtým mali všetky
+  výšku dlaždice s čipmi, napr. TNC Sync) a dlaždice sa pri väčšom okne neroztiahnu. Rady sú nižšie o ~60 px.
+
 ## 2026.11.25-26
 - Dlaždice sú kompaktnejšie (menšia ikona a medzery, ~22 px na rad), aby sa na malých monitoroch zmestilo viac z nich.
   Okno sa už nedá zmenšiť pod 1100×680 (predtým 900×600), aby sa dlaždice nezobrazovali len napoly; ak sa nezmestia

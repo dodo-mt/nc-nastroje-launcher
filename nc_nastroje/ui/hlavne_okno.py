@@ -761,12 +761,16 @@ class HlavneOkno(TkinterDnD.Tk):
             self._platno.yview_moveto(0)
 
     def _prepocitaj_riadky(self):
-        """Minimálna výška riadku mriežky = najvyššia dlaždica (stav a čipy ju môžu zväčšiť)."""
+        """Minimálna výška každého riadku mriežky = najvyššia dlaždica v tom riadku (stav a čipy ju môžu zväčšiť);
+        nízke dlaždice v inom riadku tak nemusia byť zbytočne vysoké kvôli dlaždici s čipmi."""
         if not self.dlazdice or not self._stlpcov:
             return
-        vyska = max(d.winfo_reqheight() for d in self.dlazdice.values()) + 12
+        vysky: dict[int, int] = {}
+        for i, d in enumerate(self.dlazdice.values()):
+            r = i // self._stlpcov
+            vysky[r] = max(vysky.get(r, 0), d.winfo_reqheight() + 12)
         for r in range(8):
-            self.mriezka.rowconfigure(r, minsize=vyska if r < -(-len(self.dlazdice) // self._stlpcov) else 0)
+            self.mriezka.rowconfigure(r, minsize=vysky.get(r, 0))
         self.after_idle(self._platno_zmena)
 
     def _koliesko(self, e):
@@ -792,7 +796,7 @@ class HlavneOkno(TkinterDnD.Tk):
         for c in range(6):
             self.mriezka.columnconfigure(c, weight=1 if c < stlpcov else 0, uniform="s" if c < stlpcov else "")
         for r in range(8):
-            self.mriezka.rowconfigure(r, weight=1 if r < riadkov else 0)
+            self.mriezka.rowconfigure(r, weight=0)
         for i, d in enumerate(self.dlazdice.values()):
             d.grid(row=i // stlpcov, column=i % stlpcov, sticky="nsew", padx=6, pady=6)
         self.after_idle(self._prepocitaj_riadky)
