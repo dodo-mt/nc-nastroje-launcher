@@ -968,6 +968,17 @@ class HlavneOkno(TkinterDnD.Tk):
         self.attributes("-topmost", True)          # Windows inak často nepustí okno pred ostatné
         self.after(150, lambda: self.attributes("-topmost", False))
         self.focus_force()
+        self._fokus_na_pole()
+        self.after(200, self._fokus_na_pole)       # Windows niekedy odovzdá okno do popredia až o chvíľu
+
+    def _fokus_na_pole(self):
+        """Po vyvolaní okna (skratka, tray, druhé spustenie) je aktívne pole zákazky – dá sa hneď písať.
+        Ak je otvorený iný dialóg (napr. Nastavenia), nič sa nepreberá."""
+        try:
+            if self.focus_displayof() is None or self.focus_displayof().winfo_toplevel() is self:
+                self.aktivne_pole().fokus()
+        except (tk.TclError, KeyError, AttributeError):
+            pass
 
     def skry_do_tray(self):
         """Zatvorenie okna (X) = skryť do tray; prvýkrát oznámenie. Bez tray ikony sa launcher ukončí."""

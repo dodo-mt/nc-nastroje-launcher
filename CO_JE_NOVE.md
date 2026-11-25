@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.25-29
+- Keď okno vyvoláš klávesovou skratkou (alebo z tray / druhým spustením), je hneď aktívne pole „Číslo zákazky / výkresu“
+  – dá sa písať bez klikania.
+
 ## 2026.11.25-28
 - Dlaždice sú o ďalších ~20 px nižšie: skrytý riadok pre chybové hlásenie už nezaberá miesto pod tlačidlami, ak nie je
   čo ukázať.
