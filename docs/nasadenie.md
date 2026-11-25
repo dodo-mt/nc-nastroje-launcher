@@ -28,6 +28,16 @@ python nastroje/publikuj.py launcher dist\nc_nastroje
 Ostatné aplikácie sa publikujú rovnako: `python nastroje/publikuj.py <app_id> <build>`.
 To isté urobí v okne launchera Súbor → Nasadiť aplikáciu… (len plný režim; od verzie 2026.11.24-10).
 
+## 2b. Spoločná šablóna výkresu (Excel + logo)
+
+Šablóna `Template_cnc_vykres_viena_excel.xlsx` a `viena logo.PNG` sú spoločné pre Edgecam aj hyperMILL a ležia na L:\_Nastroje\sablony\<verzia>\ (`aktualna.txt` = platná verzia; staré verzie ostávajú, návrat späť = prepísať `aktualna.txt`).
+
+```
+python nastroje/publikuj.py sablony <priecinok_so_sablonou> [--verzia RRRR.MM.DD-N]
+```
+
+alebo v okne **Súbor → Nasadiť aplikáciu… → Šablóna výkresu – Excel + logo**. Pred zápisom sa šablóna skontroluje (popisy hlavičky, plochy na obrázky `A11:D29` / `E11:J29`, tlačová oblasť `A1:J30`, šírky stĺpcov); chybná sa nenasadí. `apps.json` sa nemení. Aplikácie (Edgecam, hyperMILL) si šablónu pri štarte skopírujú do `%LOCALAPPDATA%\NC_Nastroje\sablony` a používajú cache; ak L: nie je dostupný alebo je šablóna chybná, ostane predošlá kópia (a nakoniec šablóna zabalená v exe). Kód je v spoločnom balíku `cnc_vykresy_spolocne.sablony` (priečinok „cnc vykresy spolocne“ vedľa projektu; `zostav.py` ho zabalí do exe).
+
 ## 3. Inštalácia (kolega)
 
 Dvojklik na `L:\_Nastroje\Instalovat NC Nastroje.bat`. Skript skopíruje launcher do

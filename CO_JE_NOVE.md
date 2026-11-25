@@ -1,5 +1,11 @@
 # Čo je nové
 
+## 2026.11.25-25
+- Súbor → Nasadiť aplikáciu…: pribudla položka **Šablóna výkresu – Excel + logo**. Nasadí spoločnú šablónu
+  (`Template_cnc_vykres_viena_excel.xlsx`, `viena logo.PNG`) do `L:\_Nastroje\sablony\<verzia>\` a prepíše
+  `aktualna.txt`; pred nasadením sa šablóna skontroluje (popisy hlavičky, plochy na obrázky, tlačová oblasť).
+  Rovnako cez terminál: `python nastroje/publikuj.py sablony <priečinok>`. Edgecam aj hyperMILL si ju berú z L:.
+
 ## 2026.11.24-24
 - Oprava: pri zmenšení okna na minimum sa z dlaždíc strácali tlačidlá Spustiť / Otvoriť (dlaždice sa zmenšili pod svoj
   obsah). Dlaždice si teraz držia potrebnú výšku a ak sa pri malom okne nezmestia, vpravo sa objaví posuvník

@@ -1,6 +1,7 @@
 """Nasadenie novej verzie aplikácie (alebo launchera) do koreňa nástrojov (L:\\_Nastroje).
 
     python nastroje/publikuj.py <app_id> <cesta_k_buildu> [--verzia RRRR.MM.DD-N] [--koren CESTA] [--ano]
+    python nastroje/publikuj.py sablony <priecinok_so_sablonou> [--verzia ...]   # spoločná šablóna výkresu + logo
 
 Postup (jediné miesto, kde sa zapisuje na L:\\_Nastroje; bežný beh launchera len číta):
   1. skopíruje build do <koren>\\<app_id>\\<verzia>.tmp\\ a overí počet a veľkosť súborov,
@@ -19,8 +20,8 @@ from pathlib import Path
 PROJEKT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJEKT))
 
-from nc_nastroje.publikovanie import (INSTALATOR, PublikaciaChyba, dalsia_verzia, publikuj,  # noqa: E402,F401
-                                      text_instalatora, verzia_z_buildu)
+from nc_nastroje.publikovanie import (INSTALATOR, SABLONY_ID, PublikaciaChyba, dalsia_verzia, publikuj,  # noqa: E402,F401
+                                      publikuj_sablonu_vykresu, text_instalatora, verzia_z_buildu)
 
 
 def _je_testovaci_koren(koren: Path) -> bool:
@@ -53,12 +54,20 @@ def main(argv: list[str] | None = None) -> int:
             print("Zrušené.")
             return 1
     try:
-        v = publikuj(koren, a.app_id, Path(a.build), a.verzia, poznamky=Path(a.poznamky) if a.poznamky else None)
+        if a.app_id == SABLONY_ID:
+            v = publikuj_sablonu_vykresu(koren, Path(a.build), a.verzia)
+        else:
+            v = publikuj(koren, a.app_id, Path(a.build), a.verzia, poznamky=Path(a.poznamky) if a.poznamky else None)
     except PublikaciaChyba as e:
         print(f"CHYBA: {e}", file=sys.stderr)
         return 1
     print(f"Hotovo: {v['app_id']} {v['verzia']} -> {v['cielovy']} ({v['subory']} súborov, {v['bajty']} B)")
-    print("apps.json aktualizovaný (záloha apps.json.bak).")
+    if a.app_id == SABLONY_ID:
+        for w in v.get("varovania", []):
+            print(f"POZOR: {w}")
+        print("aktualna.txt aktualizovaný (stará verzia ostala v priečinku sablony\\ – návrat späť = prepísať aktualna.txt).")
+    else:
+        print("apps.json aktualizovaný (záloha apps.json.bak).")
     if "instalator" in v:
         print(f"Inštalátor pre kolegov: {v['instalator']}")
     return 0

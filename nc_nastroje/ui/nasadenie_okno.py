@@ -8,8 +8,11 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from ..publikovanie import PublikaciaChyba, publikuj, zoznam_aplikacii
+from ..publikovanie import PublikaciaChyba, SABLONY_ID, publikuj, publikuj_sablonu_vykresu, zoznam_aplikacii
 from .tema import FONT, PALETA, Tooltip, centruj
+
+
+NAZOV_SABLONY = "Šablóna výkresu – Excel + logo (spoločná pre Edgecam a hyperMILL)"
 
 
 class OknoNasadenia(tk.Toplevel):
@@ -21,6 +24,7 @@ class OknoNasadenia(tk.Toplevel):
         self._rodic, self._koren, self._pozadie, self._pri_hotovo = rodic, Path(koren), pozadie, pri_hotovo
         self._id_podla_nazvu: dict[str, str] = {}
         self._pracuje = False
+        self._sablona = False                         # práve sa nasadzuje šablóna (nie aplikácia)
 
         telo = ttk.Frame(self, padding=16)
         telo.pack(fill="both", expand=True)
@@ -31,9 +35,11 @@ class OknoNasadenia(tk.Toplevel):
         self._app = tk.StringVar()
         self._vyber = ttk.Combobox(telo, textvariable=self._app, state="readonly", width=44)
         self._vyber.grid(row=1, column=1, columnspan=2, sticky="we", pady=4, padx=(8, 0))
+        self._vyber.bind("<<ComboboxSelected>>", lambda e: self._pri_zmene_vyberu())
         Tooltip(self._vyber, "Aplikácia z apps.json, ktorej novú verziu nasadzuješ")
 
-        ttk.Label(telo, text="Priečinok buildu:").grid(row=2, column=0, sticky="w", pady=4)
+        self._popis_buildu = ttk.Label(telo, text="Priečinok buildu:")
+        self._popis_buildu.grid(row=2, column=0, sticky="w", pady=4)
         self._build = tk.StringVar()
         pole = ttk.Entry(telo, textvariable=self._build, width=40)
         pole.grid(row=2, column=1, sticky="we", pady=4, padx=(8, 4))
@@ -84,14 +90,21 @@ class OknoNasadenia(tk.Toplevel):
                                  foreground=PALETA["chyba_fg"])
             return
         self._id_podla_nazvu = {f"{nazov} ({id_})": id_ for id_, nazov in vysledok[1]}
+        self._id_podla_nazvu[NAZOV_SABLONY] = SABLONY_ID           # spoločná šablóna výkresu (nie je v apps.json)
         self._vyber.configure(values=list(self._id_podla_nazvu))
-        if self._id_podla_nazvu:
-            self._vyber.current(0)
-            self._stav.configure(text="Vyber aplikáciu a priečinok s hotovým buildom.", foreground=PALETA["text2"])
-            self._nasad.configure(state="normal")
+        self._vyber.current(0)
+        self._nasad.configure(state="normal")
+        self._pri_zmene_vyberu()
+
+    def _pri_zmene_vyberu(self):
+        """Popisky podľa toho, či sa nasadzuje aplikácia (build) alebo šablóna výkresu (priečinok so šablónou)."""
+        if self._id_podla_nazvu.get(self._app.get()) == SABLONY_ID:
+            self._popis_buildu.configure(text="Priečinok so šablónou:")
+            self._stav.configure(text="Priečinok musí obsahovať Template_cnc_vykres_viena_excel.xlsx (a voliteľne "
+                                      "viena logo.PNG). Pred nasadením sa šablóna skontroluje.", foreground=PALETA["text2"])
         else:
-            self._stav.configure(text="V apps.json nie je žiadna aplikácia, ktorú by bolo možné nasadiť.",
-                                 foreground=PALETA["chyba_fg"])
+            self._popis_buildu.configure(text="Priečinok buildu:")
+            self._stav.configure(text="Vyber aplikáciu a priečinok s hotovým buildom.", foreground=PALETA["text2"])
 
     def _vyber_priecinok(self):
         zaklad = self._build.get().strip()
@@ -112,13 +125,19 @@ class OknoNasadenia(tk.Toplevel):
         if not id_:
             self._chyba("Vyber aplikáciu.")
             return
+        sablona = id_ == SABLONY_ID
         if not build or not Path(build).is_dir():
-            self._chyba("Vyber existujúci priečinok s buildom.")
+            self._chyba("Vyber existujúci priečinok " + ("so šablónou." if sablona else "s buildom."))
             return
-        if not messagebox.askyesno(
-                "Nasadiť na L:", f"Nasadiť „{self._app.get()}“ z priečinka\n{build}\n\nna {self._koren}?\n\n"
-                "Zapíše sa nová verzia a ostatné počítače si ju stiahnu.", parent=self):
+        if sablona:
+            text = (f"Nasadiť šablónu výkresu z priečinka\n{build}\n\nna {self._koren}\\sablony?\n\n"
+                    "Edgecam aj hyperMILL si ju prevezmú pri ďalšom spustení.")
+        else:
+            text = (f"Nasadiť „{self._app.get()}“ z priečinka\n{build}\n\nna {self._koren}?\n\n"
+                    "Zapíše sa nová verzia a ostatné počítače si ju stiahnu.")
+        if not messagebox.askyesno("Nasadiť na L:", text, parent=self):
             return
+        self._sablona = sablona
         self._pracuje = True
         self._nasad.configure(state="disabled")
         self._stav.configure(text="Kopírujem na L:… (môže to chvíľu trvať)", foreground=PALETA["text2"])
@@ -126,7 +145,8 @@ class OknoNasadenia(tk.Toplevel):
 
         def praca(posli):
             try:
-                v = publikuj(koren, id_, Path(build), verzia)
+                v = (publikuj_sablonu_vykresu(koren, Path(build), verzia) if sablona
+                     else publikuj(koren, id_, Path(build), verzia))
                 return ("ok", v)
             except PublikaciaChyba as e:
                 return ("chyba", str(e))
@@ -140,15 +160,20 @@ class OknoNasadenia(tk.Toplevel):
         if not self.winfo_exists():
             return
         self._nasad.configure(state="normal")
+        nezmenene = "aktualna.txt ostal nezmenený." if self._sablona else "apps.json ostal nezmenený."
         if not vysledok:
-            self._chyba("Nasadenie zlyhalo (viac v logu launchera). apps.json ostal nezmenený.")
+            self._chyba("Nasadenie zlyhalo (viac v logu launchera). " + nezmenene)
         elif vysledok[0] == "chyba":
-            self._chyba(vysledok[1] + " – apps.json ostal nezmenený.")
+            self._chyba(vysledok[1] + " – " + nezmenene)
         else:
             v = vysledok[1]
-            self._stav.configure(
-                text=f"Hotovo: {v['app_id']} {v['verzia']} ({v['subory']} súborov). apps.json aktualizovaný.",
-                foreground=PALETA["text"])
+            if self._sablona:
+                varovanie = ("  POZOR: " + "; ".join(v["varovania"])) if v.get("varovania") else ""
+                text = (f"Hotovo: šablóna výkresu {v['verzia']} ({v['subory']} súborov). "
+                        f"Aplikácie si ju prevezmú pri ďalšom spustení.{varovanie}")
+            else:
+                text = f"Hotovo: {v['app_id']} {v['verzia']} ({v['subory']} súborov). apps.json aktualizovaný."
+            self._stav.configure(text=text, foreground=PALETA["text"])
             self._pri_hotovo()
 
     def _zavri_klik(self):

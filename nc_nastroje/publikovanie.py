@@ -19,6 +19,7 @@ from .aktualizacie import _spocitaj, je_novsia, parsuj_verziu
 from .katalog import je_plna_cesta
 
 
+SABLONY_ID = "sablony"                                     # špeciálny „app_id“: spoločná šablóna výkresu (nie je v apps.json)
 INSTALATOR = "Instalovat NC Nastroje.bat"     # pre kolegov: dvojklik na L:\\_Nastroje\\Instalovat NC Nastroje.bat
 
 
@@ -188,3 +189,21 @@ def zoznam_aplikacii(koren: Path) -> list[tuple[str, str]]:
     if isinstance(data.get("launcher"), dict):
         vysledok.append(("launcher", "NC Nástroje (samotný launcher)"))
     return vysledok
+
+
+def publikuj_sablonu_vykresu(koren: Path, zdroj: Path, verzia: str | None = None, dnes: date | None = None) -> dict:
+    """Nasadí spoločnú šablónu výkresu (Excel + logo) do <koreň>\\sablony\\<verzia>\\ a prepíše aktualna.txt.
+    Kontrola a zápis sú v spoločnom balíku (cnc_vykresy_spolocne.sablony). Apps.json sa nemení.
+    Vráti {'app_id', 'verzia', 'cielovy', 'subory', 'bajty', 'varovania'}; pri chybe PublikaciaChyba (nič sa nezapísalo)."""
+    from .spolocne import sablony_modul
+    try:
+        sb = sablony_modul()
+    except ImportError as e:
+        raise PublikaciaChyba("Spoločný balík cnc_vykresy_spolocne nie je dostupný (priečinok „cnc vykresy spolocne“ vedľa "
+                              f"projektu): {e}") from e
+    try:
+        v = sb.publikuj_sablony(koren, zdroj, verzia, dnes)
+    except sb.SablonaChyba as e:
+        raise PublikaciaChyba(str(e)) from e
+    return {"app_id": SABLONY_ID, "verzia": v["verzia"], "cielovy": Path(v["cielovy"]), "subory": v["subory"],
+            "bajty": v["bajty"], "varovania": v["varovania"]}
