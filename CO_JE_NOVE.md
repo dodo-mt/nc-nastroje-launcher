@@ -1,5 +1,12 @@
 # Čo je nové
 
+## 2026.11.25-26
+- Dlaždice sú kompaktnejšie (menšia ikona a medzery, ~22 px na rad), aby sa na malých monitoroch zmestilo viac z nich.
+  Okno sa už nedá zmenšiť pod 1100×680 (predtým 900×600), aby sa dlaždice nezobrazovali len napoly; ak sa nezmestia
+  všetky, vpravo je posuvník. Štartovacia veľkosť okna je 1160×800.
+- Nové názvy a popisky: **Prog. list Hypermill** (Zo šablóny Hypermill → Excel + PDF) a **Prog. list Edgecam**
+  (Z programov .h a .mpf → Excel + PDF).
+
 ## 2026.11.25-25
 - Súbor → Nasadiť aplikáciu…: pribudla položka **Šablóna výkresu – Excel + logo**. Nasadí spoločnú šablónu
   (`Template_cnc_vykres_viena_excel.xlsx`, `viena logo.PNG`) do `L:\_Nastroje\sablony\<verzia>\` a prepíše

@@ -3,8 +3,8 @@
   "aplikacie": [
     {
       "id": "programovy_list",
-      "nazov": "Programový list Hypermill",
-      "popis": "Nákresy upnutia → Excel + PDF",
+      "nazov": "Prog. list Hypermill",
+      "popis": "Zo šablóny Hypermill → Excel + PDF",
       "typ": "exe",
       "verzia": "",
       "zdroj": "",
@@ -50,8 +50,8 @@
     },
     {
       "id": "cnc_vykres_edgecam",
-      "nazov": "Programový list Edgecam",
-      "popis": "Výkres upnutia z NC programu → Excel + PDF",
+      "nazov": "Prog. list Edgecam",
+      "popis": "Z programov .h a .mpf → Excel + PDF",
       "typ": "exe",
       "verzia": "",
       "zdroj": "",

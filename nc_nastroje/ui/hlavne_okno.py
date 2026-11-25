@@ -76,8 +76,8 @@ class HlavneOkno(TkinterDnD.Tk):
         self._index = zakazky.IndexZakaziek(Path(self.nast.koren_l))   # cache zákaziek (lokálny súbor)
         self._index_pokus = datetime.min
         self.title(f"NC Nástroje – {VERZIA}")
-        self.geometry("1160x740")
-        self.minsize(900, 600)
+        self.geometry("1160x800")
+        self.minsize(1100, 680)
         try:
             self._ikona_okna = ImageTk.PhotoImage(vytvor_ikonu(None, 64))   # ikona okna a panela úloh
             self.iconphoto(True, self._ikona_okna)

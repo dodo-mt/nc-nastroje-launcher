@@ -14,7 +14,7 @@ from ..stavy import Stav
 from .tema import FONT, STAVY, PALETA, Tooltip
 
 MAX_CIPOV = 8
-IKONA_PX = 44
+IKONA_PX = 36
 
 
 class Dlazdica(tk.Frame):
@@ -37,7 +37,7 @@ class Dlazdica(tk.Frame):
         self._ram.place(x=0, y=0, relwidth=1, relheight=1)
         self._ram.bind("<Configure>", lambda e: self._kresli_ram())
 
-        # Ikona 44 px (PNG je 80 px kvôli ostrosti) + sivá verzia pre nekompatibilný stav
+        # Ikona 36 px (PNG je 80 px kvôli ostrosti) + sivá verzia pre nekompatibilný stav
         self._ikona = self._ikona_siva = None
         subor = IKONY_DIR / (app.ikona or f"{app.id}.png")
         if subor.exists():
@@ -48,16 +48,16 @@ class Dlazdica(tk.Frame):
             siva.putalpha(rgba.getchannel("A"))
             self._ikona_siva = ImageTk.PhotoImage(siva)
         self._ikona_lbl = tk.Label(self, image=self._ikona, bg=t["karta"])
-        self._ikona_lbl.grid(row=0, column=0, rowspan=2, padx=(16, 12), pady=(16, 4))
+        self._ikona_lbl.grid(row=0, column=0, rowspan=2, padx=(14, 10), pady=(10, 2))
 
         tk.Label(self, text=app.nazov, font=(FONT, 13, "bold"), bg=t["karta"], fg=t["text"], anchor="w")\
-            .grid(row=0, column=1, sticky="sw", pady=(16, 0))
+            .grid(row=0, column=1, sticky="sw", pady=(10, 0))
         tk.Label(self, text=app.popis, font=(FONT, 10), bg=t["karta"], fg=t["text2"], anchor="w")\
             .grid(row=1, column=1, columnspan=2, sticky="nw")
 
         # Stavová bodka + text (mení ich `nastav_stav` podľa adaptérov)
         stav = tk.Frame(self, bg=t["karta"])
-        stav.grid(row=0, column=2, sticky="ne", padx=16, pady=(20, 0))
+        stav.grid(row=0, column=2, sticky="ne", padx=14, pady=(13, 0))
         self._bodka = tk.Canvas(stav, width=12, height=12, bg=t["karta"], highlightthickness=0)
         self._bodka.pack(side="left", padx=(0, 6))
         self._bodka_id = self._bodka.create_oval(1, 1, 11, 11, fill=STAVY["necinny"][0], outline="")
@@ -67,17 +67,17 @@ class Dlazdica(tk.Frame):
         self._riadky = [tk.Label(self, text="", font=(FONT, 10), bg=t["karta"], fg=t["text"], anchor="w")
                         for _ in range(2)]
         for i, lbl in enumerate(self._riadky):
-            lbl.grid(row=2 + i, column=0, columnspan=3, sticky="nw", padx=16, pady=(10 if i == 0 else 0, 0))
+            lbl.grid(row=2 + i, column=0, columnspan=3, sticky="nw", padx=14, pady=(6 if i == 0 else 0, 0))
 
         # Čipy (napr. stroje TNC Sync); riadok 4 sa naťahuje, čipy ostávajú hore
         self._cipy = []
         self._cipy_ram = tk.Frame(self, bg=t["karta"])
-        self._cipy_ram.grid(row=4, column=0, columnspan=3, sticky="nw", padx=16, pady=(8, 0))
+        self._cipy_ram.grid(row=4, column=0, columnspan=3, sticky="nw", padx=14, pady=(4, 0))
         self.rowconfigure(4, weight=1)
 
         # Spodný riadok: verzia vľavo, tlačidlá vpravo
         spodok = tk.Frame(self, bg=t["karta"])
-        spodok.grid(row=5, column=0, columnspan=3, sticky="sew", padx=16, pady=(0, 16))
+        spodok.grid(row=5, column=0, columnspan=3, sticky="sew", padx=14, pady=(0, 10))
         spodok.columnconfigure(0, weight=1)
         verzia = "web" if app.typ == "web" else ("priamo z L:" if app.priamo else f"v {app.verzia}")
         self._verzia_lbl = tk.Label(spodok, text=verzia, font=(FONT, 9), bg=t["karta"], fg=t["text2"])
@@ -98,7 +98,7 @@ class Dlazdica(tk.Frame):
         self._ttk_tlacidla.append((self._tlacidlo, True))
 
         self._chyba = tk.Label(self, text="", font=(FONT, 9), bg=t["karta"], fg=STAVY["chyba"][0], anchor="w")
-        self._chyba.grid(row=6, column=0, columnspan=3, sticky="w", padx=16)
+        self._chyba.grid(row=6, column=0, columnspan=3, sticky="w", padx=14)
 
         # Dvojklik = spustiť, pravé tlačidlo = menu (nad celou dlaždicou aj nad jej potomkami)
         self._zviaz(self)
@@ -144,7 +144,7 @@ class Dlazdica(tk.Frame):
         t = PALETA
         for i, (text, stav) in enumerate(cipy):
             c = tk.Frame(self._cipy_ram, bg=t["pozadie"], highlightbackground=t["okraj"], highlightthickness=1)
-            c.grid(row=i // 4, column=i % 4, sticky="w", padx=(0, 6), pady=(0, 4))
+            c.grid(row=i // 4, column=i % 4, sticky="w", padx=(0, 6), pady=(0, 3))
             tk.Label(c, text="●", font=(FONT, 8), bg=t["pozadie"],
                      fg=STAVY.get(stav, STAVY["nezname"])[0]).pack(side="left", padx=(6, 2))
             tk.Label(c, text=text, font=(FONT, 9), bg=t["pozadie"], fg=t["text"]).pack(side="left", padx=(0, 6), pady=2)
