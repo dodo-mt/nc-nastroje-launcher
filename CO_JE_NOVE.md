@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.25-32
+- Dlaždice lícujú s horným riadkom: pole zákazky začína presne nad ľavou dlaždicou a tlačidlo Hľadať v Lupe končí
+  presne nad pravou (predtým boli dlaždice o 6 px odsadené). Rovnako lícujú aj pruhy (upozornenia, ťahanie súborov).
+
 ## 2026.11.25-31
 - Triedič NC: tlačidlo Pozastaviť / Pokračovať má zaoblené rohy a rovnakú výšku ako ostatné tlačidlá.
 

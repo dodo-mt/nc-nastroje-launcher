@@ -798,7 +798,9 @@ class HlavneOkno(TkinterDnD.Tk):
         for r in range(8):
             self.mriezka.rowconfigure(r, weight=0)
         for i, d in enumerate(self.dlazdice.values()):
-            d.grid(row=i // stlpcov, column=i % stlpcov, sticky="nsew", padx=6, pady=6)
+            stlpec = i % stlpcov     # krajné dlaždice lícujú s horným riadkom (pole zákazky, tlačidlá) a pruhmi
+            d.grid(row=i // stlpcov, column=stlpec, sticky="nsew", pady=6,
+                   padx=(0 if stlpec == 0 else 6, 0 if stlpec == stlpcov - 1 else 6))
         self.after_idle(self._prepocitaj_riadky)
 
     # ---------- drag & drop ----------
