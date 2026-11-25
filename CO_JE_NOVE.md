@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.25-28
+- Dlaždice sú o ďalších ~20 px nižšie: skrytý riadok pre chybové hlásenie už nezaberá miesto pod tlačidlami, ak nie je
+  čo ukázať.
+
 ## 2026.11.25-27
 - Dlaždice už nie sú zbytočne vysoké: každý rad mriežky má výšku podľa svojej najvyššej dlaždice (predtým mali všetky
   výšku dlaždice s čipmi, napr. TNC Sync) a dlaždice sa pri väčšom okne neroztiahnu. Rady sú nižšie o ~60 px.

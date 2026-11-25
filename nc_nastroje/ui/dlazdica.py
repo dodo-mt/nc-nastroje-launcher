@@ -99,6 +99,7 @@ class Dlazdica(tk.Frame):
 
         self._chyba = tk.Label(self, text="", font=(FONT, 9), bg=t["karta"], fg=STAVY["chyba"][0], anchor="w")
         self._chyba.grid(row=6, column=0, columnspan=3, sticky="w", padx=14)
+        self._chyba.grid_remove()          # prázdny popisok by zbytočne zväčšoval dlaždicu o jeden riadok
 
         # Dvojklik = spustiť, pravé tlačidlo = menu (nad celou dlaždicou aj nad jej potomkami)
         self._zviaz(self)
@@ -223,7 +224,14 @@ class Dlazdica(tk.Frame):
         self._spusti()
 
     def ukaz_chybu(self, text: str):
-        self._chyba.configure(text=text)
         if self._chyba_id:
             self.after_cancel(self._chyba_id)
-        self._chyba_id = self.after(8000, lambda: self._chyba.configure(text="")) if text else None
+        self._nastav_chybu(text)
+        self._chyba_id = self.after(8000, lambda: self._nastav_chybu("")) if text else None
+
+    def _nastav_chybu(self, text: str):
+        self._chyba.configure(text=text)
+        if text:
+            self._chyba.grid()
+        else:
+            self._chyba.grid_remove()
