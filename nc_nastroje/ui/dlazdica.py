@@ -124,13 +124,13 @@ class Dlazdica(tk.Frame):
     def _obnov_pozastavit(self):
         """Pozastaviť = zelené, keď aplikácia beží; Pokračovať = oranžové, keď je pozastavená; inak neutrálne sivé."""
         if self._pozastavene:
-            self._pozastavit_btn.configure(text="Pokračovať")
+            self._pozastavit_btn.nastav_text("Pokračovať")
             self._pozastavit_btn.nastav_farbu(STAVY["upozornenie"][0], "#7E4A00")
         elif self._stav.stav == "ok":
-            self._pozastavit_btn.configure(text="Pozastaviť")
+            self._pozastavit_btn.nastav_text("Pozastaviť")
             self._pozastavit_btn.nastav_farbu(STAVY["ok"][0], "#0B610B")
         else:
-            self._pozastavit_btn.configure(text="Pozastaviť")
+            self._pozastavit_btn.nastav_text("Pozastaviť")
             self._pozastavit_btn.nastav_farbu(FARBA_NEUTRALNA, "#7B8187")
 
     def _pozastavit(self):
@@ -179,7 +179,7 @@ class Dlazdica(tk.Frame):
     def _tk_widgety(self, w=None):
         w = w if w is not None else self
         for d in w.winfo_children():
-            if isinstance(d, (tk.Frame, tk.Label, tk.Canvas)) and not isinstance(d, FarebneTlacidlo):
+            if isinstance(d, (tk.Frame, tk.Label, tk.Canvas)):
                 yield d
             yield from self._tk_widgety(d)
 

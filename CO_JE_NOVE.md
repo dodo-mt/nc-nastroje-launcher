@@ -1,5 +1,8 @@
 # Čo je nové
 
+## 2026.11.25-31
+- Triedič NC: tlačidlo Pozastaviť / Pokračovať má zaoblené rohy a rovnakú výšku ako ostatné tlačidlá.
+
 ## 2026.11.25-30
 - Triedič NC: **Otvoriť** je modré ako pri ostatných dlaždiciach. **Pozastaviť** je zelené, keď triedič beží, **Pokračovať**
   oranžové, keď je pozastavený (keď nebeží, je sivé).
