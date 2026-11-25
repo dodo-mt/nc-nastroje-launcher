@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.25-30
+- Triedič NC: **Otvoriť** je modré ako pri ostatných dlaždiciach. **Pozastaviť** je zelené, keď triedič beží, **Pokračovať**
+  oranžové, keď je pozastavený (keď nebeží, je sivé).
+
 ## 2026.11.25-29
 - Keď okno vyvoláš klávesovou skratkou (alebo z tray / druhým spustením), je hneď aktívne pole „Číslo zákazky / výkresu“
   – dá sa písať bez klikania.

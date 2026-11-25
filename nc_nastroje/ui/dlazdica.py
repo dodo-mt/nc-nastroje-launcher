@@ -11,10 +11,12 @@ from PIL import Image, ImageOps, ImageTk
 from ..config import IKONY_DIR
 from ..katalog import App
 from ..stavy import Stav
+from .farebne_tlacidlo import FarebneTlacidlo
 from .tema import FONT, STAVY, PALETA, Tooltip
 
 MAX_CIPOV = 8
 IKONA_PX = 36
+FARBA_NEUTRALNA = "#6B7280"      # Pozastaviť, keď aplikácia nebeží (biely text, kontrast ~4.8:1)
 
 
 class Dlazdica(tk.Frame):
@@ -86,13 +88,13 @@ class Dlazdica(tk.Frame):
         tlacidla.grid(row=0, column=1, sticky="se")
         self._ttk_tlacidla: list[tuple[ttk.Button, bool]] = []   # (tlačidlo, je povolené)
         if app.pozastavit:
-            self._pozastavit_btn = ttk.Button(tlacidla, text="Pozastaviť", command=self._pozastavit)
+            self._pozastavene = False
+            self._pozastavit_btn = FarebneTlacidlo(tlacidla, "Pozastaviť", self._pozastavit, FARBA_NEUTRALNA)
             self._pozastavit_btn.pack(side="left", padx=(0, 8))
             Tooltip(self._pozastavit_btn, "Požiada aplikáciu o pozastavenie (lokálna požiadavka – aplikácia ju "
                                           "musí podporovať, viď docs/zmeny_v_aplikaciach.md)")
             self._ttk_tlacidla.append((self._pozastavit_btn, True))
-        styl = "TButton" if app.pozastavit else "Accent.TButton"
-        self._tlacidlo = ttk.Button(tlacidla, text=app.tlacidlo, style=styl, command=self._spusti)
+        self._tlacidlo = ttk.Button(tlacidla, text=app.tlacidlo, style="Accent.TButton", command=self._spusti)
         self._tlacidlo.pack(side="left")
         Tooltip(self._tlacidlo, f"{app.tlacidlo}: {app.nazov}")
         self._ttk_tlacidla.append((self._tlacidlo, True))
@@ -107,7 +109,7 @@ class Dlazdica(tk.Frame):
         self._prekresli()
 
     def _zviaz(self, w):
-        if not isinstance(w, ttk.Button):
+        if not isinstance(w, (ttk.Button, FarebneTlacidlo)):
             w.bind("<Double-Button-1>", lambda e: self._spusti(), add="+")
             w.bind("<Button-3>", lambda e: self.pri_menu(self.app, e), add="+")
         for d in w.winfo_children():
@@ -116,7 +118,20 @@ class Dlazdica(tk.Frame):
     def nastav_pozastaveny(self, pozastaveny: bool):
         """Text tlačidla Pozastaviť / Pokračovať (len pre aplikácie s `pozastavit`)."""
         if self.app.pozastavit:
-            self._pozastavit_btn.configure(text="Pokračovať" if pozastaveny else "Pozastaviť")
+            self._pozastavene = pozastaveny
+            self._obnov_pozastavit()
+
+    def _obnov_pozastavit(self):
+        """Pozastaviť = zelené, keď aplikácia beží; Pokračovať = oranžové, keď je pozastavená; inak neutrálne sivé."""
+        if self._pozastavene:
+            self._pozastavit_btn.configure(text="Pokračovať")
+            self._pozastavit_btn.nastav_farbu(STAVY["upozornenie"][0], "#7E4A00")
+        elif self._stav.stav == "ok":
+            self._pozastavit_btn.configure(text="Pozastaviť")
+            self._pozastavit_btn.nastav_farbu(STAVY["ok"][0], "#0B610B")
+        else:
+            self._pozastavit_btn.configure(text="Pozastaviť")
+            self._pozastavit_btn.nastav_farbu(FARBA_NEUTRALNA, "#7B8187")
 
     def _pozastavit(self):
         if self._pri_pozastaveni:
@@ -134,6 +149,8 @@ class Dlazdica(tk.Frame):
         """Zobrazí stav z adaptéra: bodka, text, 2 riadky, čipy. `None` = „Pripravený“."""
         self._stav = stav or Stav("necinny", "Pripravený")
         self._nastav_cipy(self._stav.cipy[:MAX_CIPOV])
+        if self.app.pozastavit:
+            self._obnov_pozastavit()
         self._prekresli()
 
     def _nastav_cipy(self, cipy: list):
@@ -162,7 +179,7 @@ class Dlazdica(tk.Frame):
     def _tk_widgety(self, w=None):
         w = w if w is not None else self
         for d in w.winfo_children():
-            if isinstance(d, (tk.Frame, tk.Label, tk.Canvas)):
+            if isinstance(d, (tk.Frame, tk.Label, tk.Canvas)) and not isinstance(d, FarebneTlacidlo):
                 yield d
             yield from self._tk_widgety(d)
 
