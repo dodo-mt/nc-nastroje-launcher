@@ -14,3 +14,4 @@ dist/
 test_data/L/_Lupa/
 test_data/L/_tnc_sync/
 test_data/L/_Nastroje/_stav/
+*.code-workspace
