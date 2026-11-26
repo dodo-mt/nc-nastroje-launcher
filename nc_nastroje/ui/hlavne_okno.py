@@ -30,7 +30,7 @@ from .pole_zakazky import PoleZakazky
 from .prve_spustenie import PrveSpustenie, Volby, volby_na_nastavenia
 from .tema import FONT, PALETA, STAVY, Tooltip, nastav_temu, prefarbi_strom, prepni_ttk_temu, titulok_okna
 from .vyber_aplikacie import VyberAplikacie
-from .zakazka_okna import NenaslaZakazku, OknoZakazky, VyberZakazky
+from .zakazka_okna import NenaslaZakazku, OknoZakazky, RychleOkno, VyberZakazky
 from .zoznam_detail import ZoznamDetail
 
 log = logging.getLogger(__name__)
@@ -127,6 +127,7 @@ class HlavneOkno(TkinterDnD.Tk):
         self.after(100, self._ui_pump)
         self.after(50, self._vzhlad_hore)                        # titulok okna musí byť už vytvorený
         self._skratka = klavesova_skratka.GlobalnaSkratka(lambda: self.v_ui(self.zobraz_okno))
+        self._skratka_rychle = klavesova_skratka.GlobalnaSkratka(lambda: self.v_ui(self.prepni_rychle_okno))
         self.after(300, self._nastav_skratku)
         self.after(30_000, self._katalog_hotovy_force)          # poistka, keby pozadie nikdy nedobehlo
         self.nacitaj()
@@ -255,9 +256,9 @@ class HlavneOkno(TkinterDnD.Tk):
             tp.text = pop[a][2]
         if self._b is not None:
             self._b.nastav_popisky(pop)
-        okno = getattr(self, "_okno_zakazky", None)
-        if okno is not None and okno.winfo_exists():
-            okno.nastav_popisky(pop)
+        for okno in (getattr(self, "_okno_zakazky", None), getattr(self, "_rychle_okno", None)):
+            if okno is not None and okno.winfo_exists():
+                okno.nastav_popisky(pop)
 
     def rychla_akcia(self, akcia: str, text: str | None = None):
         """akcia: L (otvoriť na L:) | R (rovnaká cesta na R:) | lupa. Hľadanie beží na pozadí, UI nečaká na sieť."""
@@ -455,9 +456,10 @@ class HlavneOkno(TkinterDnD.Tk):
         self._potvrd("Obnovujem aplikácie, aktualizácie a stavy…")
 
     def _nastav_skratku(self):
-        chyba = self._skratka.nastav(self.nast.klavesova_skratka)
-        if chyba:
-            self._upozorni(chyba)
+        chyby = [ch for ch in (self._skratka.nastav(self.nast.klavesova_skratka),
+                               self._skratka_rychle.nastav(self.nast.skratka_rychle_okno)) if ch]
+        if chyby:
+            self._upozorni(" ".join(chyby))
 
     def nacitaj(self, sila: bool = False):
         """Rýchlo zobrazí katalóg z lokálnej cache (bez siete), potom na pozadí načíta čerstvý
@@ -973,16 +975,32 @@ class HlavneOkno(TkinterDnD.Tk):
             self._disky_ok["L"], self._disky_ok["R"], nove, pozastavene))
 
     def zobraz_okno(self):
-        """Ukáže okno a dá ho do popredia (aj z tray / od druhého spustenia)."""
-        self.deiconify()
-        if self.state() == "iconic":
-            self.state("normal")
-        self.lift()
-        self.attributes("-topmost", True)          # Windows inak často nepustí okno pred ostatné
-        self.after(150, lambda: self.attributes("-topmost", False))
-        self.focus_force()
-        self._fokus_na_pole()
-        self.after(200, self._fokus_na_pole)       # Windows niekedy odovzdá okno do popredia až o chvíľu
+        """Ukáže okno a dá ho do popredia (aj z tray / od druhého spustenia).
+        Okno sa najprv celé vykreslí pri nulovej viditeľnosti a ukáže sa naraz – inak Windows ukážu nedomaľovaný rám
+        a okno pôsobí, akoby sa po zobrazení znova prekreslilo. „Vždy navrchu“ sa zapne a vypne hneď (kým okno nie je
+        vidieť), takže neskôr už nič neprebliká."""
+        try:
+            self.attributes("-alpha", 0.0)
+            self.deiconify()
+            if self.state() == "iconic":
+                self.state("normal")
+            self.lift()
+            self.attributes("-topmost", True)      # Windows inak často nepustí okno pred ostatné
+            self.update_idletasks()
+            self.attributes("-topmost", False)
+            self.focus_force()
+            self._fokus_na_pole()
+            self.update_idletasks()
+        finally:
+            self.attributes("-alpha", 1.0)
+        if not self._pole_ma_fokus():
+            self.after(200, self._fokus_na_pole)   # Windows niekedy odovzdá okno do popredia až o chvíľu
+
+    def _pole_ma_fokus(self) -> bool:
+        try:
+            return self.focus_get() is self.aktivne_pole()
+        except (tk.TclError, KeyError, AttributeError):
+            return False
 
     def _fokus_na_pole(self):
         """Po vyvolaní okna (skratka, tray, druhé spustenie) je aktívne pole zákazky – dá sa hneď písať.
@@ -1018,8 +1036,9 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def destroy(self):
         self._koniec = True
-        if getattr(self, "_skratka", None):
-            self._skratka.zastav()
+        for skr in (getattr(self, "_skratka", None), getattr(self, "_skratka_rychle", None)):
+            if skr:
+                skr.zastav()
         if self._tray:
             self._tray.zastav()
             self._tray = None
@@ -1037,6 +1056,16 @@ class HlavneOkno(TkinterDnD.Tk):
         self._okno_zakazky = OknoZakazky(self, self.rychla_akcia, navrhy=self.navrhy_zakaziek,
                                          pri_navrhu=lambda z: self._otvor_zhodu(z, "L"))
         self._okno_zakazky.nastav_popisky(priecinky.popisky_otvorenia(self.nast.otvarat_v, self.nast.totalcmd_cesta))
+
+    def prepni_rychle_okno(self):
+        """Globálna skratka: rýchle okno (pole zákazky + tlačidlá) uprostred obrazovky; ďalšie stlačenie ho zavrie."""
+        okno = getattr(self, "_rychle_okno", None)
+        if okno is not None and okno.winfo_exists():
+            okno.destroy()
+            return
+        self._rychle_okno = RychleOkno(self, self.rychla_akcia, navrhy=self.navrhy_zakaziek,
+                                       pri_navrhu=lambda z: self._otvor_zhodu(z, "L"))
+        self._rychle_okno.nastav_popisky(priecinky.popisky_otvorenia(self.nast.otvarat_v, self.nast.totalcmd_cesta))
 
     def _oznam(self, text: str):
         """Správa používateľovi: v pruhu, ak je okno vidieť, inak oznámením z tray."""
@@ -1243,7 +1272,7 @@ class HlavneOkno(TkinterDnD.Tk):
         self._aktualizuj_rezim()
         self._obnov_popisky_otvorenia()
         self._aplikuj_windows(stara, nast)
-        if nast.klavesova_skratka != stara.klavesova_skratka:
+        if (nast.klavesova_skratka, nast.skratka_rychle_okno) != (stara.klavesova_skratka, stara.skratka_rychle_okno):
             self._nastav_skratku()
         if zmena_korena:                          # stavy a aktualizácie z iného koreňa neplatia
             self._stavy, self._aktual, self._launcher_akt, self._caka = {}, {}, None, {}

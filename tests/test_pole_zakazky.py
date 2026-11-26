@@ -63,3 +63,33 @@ def test_esc_zavrie_a_potom_vymaze(pole):
     napis(p, root, "219")
     assert p._esc(None) == "break" and not p._otvorene() and p.get() == "219"
     assert p._esc(None) == "break" and p.get() == ""
+
+
+def test_rychle_okno_akcie_a_esc(pole):
+    from nc_nastroje.ui.zakazka_okna import RychleOkno
+    _, root = pole
+    akcie = []
+    o = RychleOkno(root, lambda a, t: akcie.append((a, t)))
+    root.update()
+    o._akcia("L")                                   # prázdne pole: nič sa nespustí, okno ostane
+    assert akcie == [] and o.winfo_exists()
+    o._pole._fokus_dnu()
+    o._pole.insert(0, "21930")
+    o._akcia("R")
+    assert akcie == [("R", "21930")] and not o.winfo_exists()
+    o2 = RychleOkno(root, lambda a, t: akcie.append((a, t)))
+    o2._akcia("lupa")                               # Lupa ide aj bez textu
+    assert akcie[-1] == ("lupa", "")
+
+
+def test_rychle_okno_klavesy(pole):
+    from nc_nastroje.ui.zakazka_okna import RychleOkno
+    _, root = pole
+    akcie = []
+    o = RychleOkno(root, lambda a, t: akcie.append((a, t)))
+    root.update()
+    o._pole._fokus_dnu()
+    o._pole.insert(0, "21930")
+    o._pole.event_generate("<Shift-Return>")
+    root.update()
+    assert akcie == [("R", "21930")]

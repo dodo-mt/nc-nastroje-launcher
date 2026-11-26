@@ -4,10 +4,11 @@ import re
 import tkinter as tk
 from tkinter import ttk
 
-from .tema import FONT, PALETA
+from .tema import FONT, PALETA, zaobli_okno
 
 MIN_ZNAKOV = 2          # od koľkých znakov sa ukážu návrhy
 ZDRZANIE_MS = 200       # krátka pauza po písaní
+PATKA = "Enter = otvoriť · ↑↓ výber · Esc zavrieť"
 MIN_SIRKA = 460         # ako v Lupe: číslo, zákazník, doplnok
 
 
@@ -18,12 +19,15 @@ def _farba_rama() -> str:
 
 
 class PoleZakazky(ttk.Entry):
-    def __init__(self, rodic, pri_enter, navod: str, font=(FONT, 12), navrhy=None, pri_vybere=None):
-        """navrhy(text) -> Navrhy (len z pamäte, nikdy sieť); pri_vybere(zhoda) = klik / Enter na návrhu."""
+    def __init__(self, rodic, pri_enter, navod: str, font=(FONT, 12), navrhy=None, pri_vybere=None,
+                 klavesy=None, patka=PATKA):
+        """navrhy(text) -> Navrhy (len z pamäte, nikdy sieť); pri_vybere(zhoda) = klik / Enter na návrhu.
+        klavesy: {"<Shift-Return>": funkcia, …} – ďalšie akcie na klávesoch; patka = text pod zoznamom návrhov."""
         super().__init__(rodic, font=font)
         self._navod = navod
         self._navod_aktivny = False
         self._pri_enter = pri_enter
+        self._patka = patka
         self._navrhy, self._pri_vybere = navrhy, pri_vybere
         self._zhody: list = []
         self._viac = 0
@@ -40,6 +44,8 @@ class PoleZakazky(ttk.Entry):
         self.bind("<FocusIn>", self._fokus_dnu, add="+")
         self.bind("<FocusOut>", self._fokus_von, add="+")
         self.bind("<Return>", self._enter)                      # Enter = otvoriť na L: (alebo vybraný návrh)
+        for seq, fn in (klavesy or {}).items():
+            self.bind(seq, lambda e, fn=fn: self._klavesa(fn))
         self.bind("<KeyRelease>", self._po_pisani, add="+")
         self.bind("<Down>", lambda e: self._posun(1))
         self.bind("<Up>", lambda e: self._posun(-1))
@@ -133,8 +139,12 @@ class PoleZakazky(ttk.Entry):
         popup.withdraw()
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
+        if self.winfo_toplevel().attributes("-alpha") < 1:        # v priesvitnom rýchlom okne je priesvitný aj zoznam
+            popup.attributes("-alpha", self.winfo_toplevel().attributes("-alpha"))
         popup.configure(bg=_farba_rama())                       # rámik výraznejší ako okraje kariet v okne
         popup.bind("<Escape>", self._esc)
+        zaobli_okno(popup, region_zalozne=False)
+        zaobli_okno(tien, region_zalozne=False)
         self._popup, self._tien, self._karta, self._geo, self._kluc = popup, tien, None, None, None
 
     def _ukaz(self):
@@ -159,7 +169,7 @@ class PoleZakazky(ttk.Entry):
         if self._viac:
             tk.Label(karta, text=f"… a ďalších {self._viac} – spresni hľadanie", bg=t["karta"], fg=t["text2"],
                      font=(FONT, 9), anchor="w").pack(fill="x", padx=14, pady=(4, 0))
-        tk.Label(karta, text="Enter = otvoriť · ↑↓ výber · Esc zavrieť", bg=t["karta"], fg=t["text2"],
+        tk.Label(karta, text=self._patka, bg=t["karta"], fg=t["text2"],
                  font=(FONT, 9), anchor="w").pack(fill="x", padx=14, pady=(4, 6))
         self.update_idletasks()
         sirka = max(self.winfo_width(), MIN_SIRKA)
@@ -298,6 +308,12 @@ class PoleZakazky(ttk.Entry):
             return "break"
         self._skry()
         self._pri_enter()
+        return "break"
+
+    def _klavesa(self, fn):
+        """Ďalšia akcia na klávese (napr. Shift+Enter): zoznam sa zavrie a akcia sa vykoná."""
+        self._skry()
+        fn()
         return "break"
 
     def _esc(self, _e):

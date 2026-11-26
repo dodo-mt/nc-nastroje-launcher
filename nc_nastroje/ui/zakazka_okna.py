@@ -3,8 +3,11 @@ import tkinter as tk
 from tkinter import ttk
 
 from ..zakazky import Zhoda
-from .pole_zakazky import PoleZakazky
-from .tema import FONT, PALETA, Tooltip, centruj, farby_zoznamu
+from .pole_zakazky import PoleZakazky, _farba_rama
+from PIL import ImageTk
+
+from ..ikona import vytvor_ikonu
+from .tema import FONT, PALETA, Tooltip, centruj, farby_zoznamu, zaobli_okno
 
 
 class VyberZakazky(tk.Toplevel):
@@ -123,3 +126,89 @@ class OknoZakazky(tk.Toplevel):
             return
         self.destroy()
         self._pri_akcii(akcia, text)
+
+
+class RychleOkno(tk.Toplevel):
+    """Rýchle okno z globálnej skratky: bez titulku, uprostred hore na obrazovke, pole zákazky s návrhmi a tlačidlá
+    (ako rýchle okno v aplikácii Claude). Zavrie sa po akcii, Esc, opätovnej skratke alebo kliknutí inam."""
+
+    SIRKA = 640
+    PRIESVITNOST = 0.95                 # 1.0 = nepriesvitné; mierna priesvitnosť okna (aj textu)
+
+    def __init__(self, rodic, pri_akcii, navrhy=None, pri_navrhu=None):
+        super().__init__(rodic)
+        self.withdraw()
+        self.overrideredirect(True)
+        self.attributes("-topmost", True)
+        self.attributes("-alpha", self.PRIESVITNOST)
+        t = PALETA
+        self._pri_akcii = pri_akcii
+        self._tien = tk.Toplevel(self)                          # tieň: tmavé polopriehľadné okno kúsok vedľa
+        self._tien.withdraw()
+        self._tien.overrideredirect(True)
+        self._tien.attributes("-topmost", True)
+        self._tien.attributes("-alpha", 0.22)
+        self._tien.configure(bg="#000000")
+        self.configure(bg=_farba_rama())                        # 1 px rámik
+        karta = tk.Frame(self, bg=t["karta"])
+        karta.pack(fill="both", expand=True, padx=1, pady=1)
+        telo = tk.Frame(karta, bg=t["karta"], padx=18, pady=16)
+        telo.pack(fill="both", expand=True)
+        riadok = tk.Frame(telo, bg=t["karta"])
+        riadok.pack(fill="x")
+        self._ikona = ImageTk.PhotoImage(vytvor_ikonu(None, 64).resize((34, 34)))     # ikona NC Nástrojov vľavo
+        tk.Label(riadok, image=self._ikona, bg=t["karta"]).pack(side="left", padx=(0, 12))
+        self._pole = PoleZakazky(riadok, lambda: self._akcia("L"), "Ktorú zákazku alebo zákazníka hľadáš?", font=(FONT, 16),
+                                 navrhy=navrhy,
+                                 pri_vybere=lambda z: (self.destroy(), pri_navrhu(z)) if pri_navrhu else None,
+                                 klavesy={"<Shift-Return>": lambda: self._akcia("R"),
+                                          "<Control-Return>": lambda: self._akcia("lupa")},
+                                 patka="Enter = L: · Shift+Enter = R: · Ctrl+Enter = Lupa · Esc = zavrieť")
+        self._pole.pack(side="left", fill="x", expand=True, ipady=8)
+        self._tip = Tooltip(self._pole, "Enter = otvoriť na L: · Shift+Enter = R: · Ctrl+Enter = hľadať v Lupe · Esc = zavrieť")
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.bind("<FocusOut>", lambda e: self.after(200, self._over_fokus))
+        self.update_idletasks()
+        v = self.winfo_reqheight()
+        x = (self.winfo_screenwidth() - self.SIRKA) // 2
+        y = int(self.winfo_screenheight() * 0.22)
+        self.geometry(f"{self.SIRKA}x{v}+{x}+{y}")
+        self._tien.geometry(f"{self.SIRKA + 4}x{v + 4}+{x + 1}+{y + 3}")
+        self._tien.deiconify()
+        self.deiconify()
+        zaobli_okno(self, 14, (self.SIRKA, v))                  # zaoblené rohy okna aj tieňa
+        zaobli_okno(self._tien, 14, (self.SIRKA + 4, v + 4))
+        self._tien.lift()
+        self.lift()
+        self.focus_force()
+        self._pole.focus_set()
+
+    def nastav_popisky(self, pop: dict):
+        """Rýchle okno nemá tlačidlá (len pole a klávesy) – nič sa nemení."""
+
+    def _over_fokus(self):
+        """Fokus odišiel inam (do inej aplikácie, hlavného okna…) = zavrieť. Zoznam návrhov je súčasť okna."""
+        try:
+            if not self.winfo_exists():
+                return
+            fd = self.focus_displayof()
+            vlastne = (self, getattr(self._pole, "_popup", None))
+            if fd is None or fd.winfo_toplevel() not in vlastne:
+                self.destroy()
+        except (tk.TclError, KeyError):
+            pass
+
+    def _akcia(self, akcia: str):
+        text = self._pole.text()
+        if not text and akcia != "lupa":
+            self._pole.focus_set()
+            return
+        self.destroy()
+        self._pri_akcii(akcia, text)
+
+    def destroy(self):
+        try:
+            self._tien.destroy()
+        except (tk.TclError, AttributeError):
+            pass
+        super().destroy()

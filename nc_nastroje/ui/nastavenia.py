@@ -27,6 +27,7 @@ class OknoNastaveni(tk.Toplevel):
             "koren_r": tk.StringVar(value=nast.koren_r),
             "rezim": tk.StringVar(value=nast.rezim),
             "klavesova_skratka": tk.StringVar(value=nast.klavesova_skratka),
+            "skratka_rychle_okno": tk.StringVar(value=nast.skratka_rychle_okno),
             "otvarat_v": tk.StringVar(value=nast.otvarat_v),
             "totalcmd_cesta": tk.StringVar(value=nast.totalcmd_cesta),
         }
@@ -151,8 +152,13 @@ class OknoNastaveni(tk.Toplevel):
         sk = ttk.Entry(ram_skratka, textvariable=self._v["klavesova_skratka"], width=24)
         sk.grid(row=0, column=1, padx=8)
         Tooltip(sk, "napr. Ctrl+Alt+N, Ctrl+Shift+Space, Win+F2 (prázdne = vypnuté). Win+medzera je vyhradená Windows.")
-        ttk.Label(ram_skratka, text="predvolene Ctrl+Alt+N (prázdne = vypnuté); Win+medzera patrí Windows",
-                  foreground=PALETA["text2"]).grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        ttk.Label(ram_skratka, text="Rýchle okno").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        sk2 = ttk.Entry(ram_skratka, textvariable=self._v["skratka_rychle_okno"], width=24)
+        sk2.grid(row=1, column=1, padx=8, pady=(8, 0))
+        Tooltip(sk2, "Malé okno s poľom zákazky a tlačidlami, vyvolané odkiaľkoľvek (prázdne = vypnuté). Opätovné stlačenie ho zavrie.")
+        ttk.Label(ram_skratka, text="predvolene Ctrl+Alt+N (okno) a Ctrl+Alt+Q (rýchle okno); prázdne = vypnuté; "
+                                    "Win+medzera patrí Windows",
+                  foreground=PALETA["text2"]).grid(row=2, column=0, columnspan=2, sticky="w", pady=(6, 0))
         ram_odoslat = ttk.LabelFrame(f, text="Odoslať do – pravý klik na súbor → Odoslať do", padding=10)
         ram_odoslat.grid(row=2, column=0, sticky="ew", pady=(12, 0))
         if self._apps:

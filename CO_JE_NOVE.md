@@ -1,5 +1,13 @@
 # Čo je nové
 
+## 2026.11.25-35
+- **Rýchle okno na skratke** (predvolene Ctrl+Alt+Q, Nastavenia → Klávesová skratka → Rýchle okno, prázdne = vypnuté):
+  minimalistické okno uprostred obrazovky len s poľom a ikonou NC Nástrojov, zaoblené rohy, mierna priesvitnosť.
+  Návrhy zákaziek a zákazníkov pod poľom; Enter = otvoriť na L:, Shift+Enter = R:, Ctrl+Enter = Lupa, Esc = zavrieť.
+  Opätovné stlačenie skratky okno zavrie.
+- Tooltipy sa v rýchlom okne ukážu navrchu (predtým boli pod oknom).
+- Vyvolanie hlavného okna z tray / skratkou už nebliká (okno sa ukáže až celé vykreslené).
+
 ## 2026.11.25-34
 - Okno návrhov pod poľom zákazky už pri písaní **nebliká**: nezaniká a nevzniká nanovo, mení sa len jeho obsah
   (nezmenený zoznam sa neprekresľuje). Obnovenie návrhov po krátkej pauze 200 ms.

@@ -4,7 +4,9 @@
 vytvorení a už vytvorené sa prefarbia cez `prefarbi_strom`. `SVETLA` a `TMAVA` sú nemenné predlohy.
 Kontrast textu min. 4.5:1 (testuje sa v tests/test_tema.py); `siva_*` sú zámerne nízky kontrast (nekompatibilná dlaždica).
 """
+import ctypes
 import tkinter as tk
+from ctypes import wintypes
 
 import sv_ttk
 
@@ -191,6 +193,11 @@ class Tooltip:
         self._okno = tk.Toplevel(self.widget)
         self._okno.wm_overrideredirect(True)
         self._okno.wm_geometry(f"+{x}+{y}")
+        try:                                       # okno „vždy navrchu“ (rýchle okno) by tooltip zakrylo
+            if self.widget.winfo_toplevel().attributes("-topmost"):
+                self._okno.attributes("-topmost", True)
+        except tk.TclError:
+            pass
         tk.Label(self._okno, text=self.text, bg=PALETA["tip_bg"], fg=PALETA["tip_fg"], relief="solid", bd=1,
                  font=(FONT, 9), padx=6, pady=3, justify="left").pack()
 
@@ -201,3 +208,29 @@ class Tooltip:
         if self._okno:
             self._okno.destroy()
             self._okno = None
+
+
+def zaobli_okno(okno: tk.Misc, polomer: int = 14, velkost: tuple[int, int] | None = None, region_zalozne: bool = True) -> bool:
+    """Zaoblí rohy okna bez titulku (overrideredirect). Windows 11: DWM (hladké rohy). Staršie Windows: výrez okna
+    (`SetWindowRgn`, ak `region_zalozne` a je známa `velkost`). Vráti, či sa niečo zaoblilo; chyba nič nezhodí."""
+    try:
+        okno.update_idletasks()
+        user32, dwm = ctypes.windll.user32, ctypes.windll.dwmapi
+        user32.GetParent.restype = wintypes.HWND
+        user32.GetParent.argtypes = [wintypes.HWND]
+        hwnd = user32.GetParent(okno.winfo_id())
+        if not hwnd:
+            return False
+        dwm.DwmSetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
+        volba = ctypes.c_int(2)                                   # DWMWCP_ROUND
+        if dwm.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(volba), 4) == 0:      # 33 = DWMWA_WINDOW_CORNER_PREFERENCE
+            return True
+        if region_zalozne and velkost:
+            gdi = ctypes.windll.gdi32
+            gdi.CreateRoundRectRgn.restype = wintypes.HRGN
+            rgn = gdi.CreateRoundRectRgn(0, 0, velkost[0] + 1, velkost[1] + 1, polomer * 2, polomer * 2)
+            user32.SetWindowRgn.argtypes = [wintypes.HWND, wintypes.HRGN, wintypes.BOOL]
+            return bool(user32.SetWindowRgn(hwnd, rgn, True))
+    except (OSError, AttributeError, tk.TclError):
+        pass
+    return False
