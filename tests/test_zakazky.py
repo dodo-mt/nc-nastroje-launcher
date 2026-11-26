@@ -210,11 +210,11 @@ def test_priamy_prechod_nema_zapisovat_na_l(idx, L):
 
 
 # ---------- Zhoda ----------
-def test_zhoda_cesta_a_rovnaka_relativna_cesta_na_r(L):
+def test_zhoda_cesta_na_l_a_cesta_na_r_ma_zakaznika_len_ako_cislo(L):
     z = Zhoda("101270-Firma Alfa spol", "OD00021930")
     assert z.cesta(L) == L / "101270-Firma Alfa spol" / "OD00021930"
     r = Path("R:/")
-    assert z.cesta(r) == r / "101270-Firma Alfa spol" / "OD00021930"
+    assert z.cesta_r(r) == r / "101270" / "OD00021930"                 # na R: je priečinok zákazníka len číslo (Triedič NC)
 
 
 # ---------- Lupa ----------

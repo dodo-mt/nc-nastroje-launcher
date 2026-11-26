@@ -46,6 +46,8 @@ Python 3.11+, Windows 10/11, `tkinter` + `sv-ttk`, `tkinterdnd2` (drag & drop), 
 `pywin32` (.lnk zástupcovia). Balenie PyInstaller `--onedir --windowed`. Bez databázy a servera, konfigurácia v JSON.
 **Nové knižnice len po opýtaní.**
 
+**Spoločný balík `nc_parsery`** (priečinok `..\NC parsery`, GitHub `dodo-mt/nc-parsery`, plán `NC parsery\docs\plan_krok4.md`): `Dotaz`, `normalizuj`, `vyhovuje` a cesta zákazníka na R: sú v ňom (`nc_nastroje/zakazky.py` ich importuje); `nc_nastroje/nc_parsery_cesta.py` ho zapája, `nastroje/zostav.py` pridáva `--paths`. Bez priečinka `NC parsery` vedľa projektu sa launcher zo zdroja nespustí (hláška).
+
 ```
 nc_nastroje/  main.py (štart, single instance, argumenty) · verzia.py · config.py · katalog.py (App, validácia apps.json)
               spustac.py · aktualizacie.py · stavy.py (adaptéry) · zakazky.py · dnd.py · tray.py · windows_integracia.py

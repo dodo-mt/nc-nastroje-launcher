@@ -29,7 +29,7 @@ def prikaz_pyinstaller(vystup: Path, praca: Path, ico: Path) -> list[str]:
     return [
         sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed",
         "--name", NAZOV, "--distpath", str(vystup), "--workpath", str(praca), "--specpath", str(praca),
-        "--icon", str(ico), "--paths", str(PROJEKT), "--paths", str(PROJEKT.parent / "cnc vykresy spolocne"),
+        "--icon", str(ico), "--paths", str(PROJEKT), "--paths", str(PROJEKT.parent / "cnc vykresy spolocne"), "--paths", str(PROJEKT.parent / "NC parsery"),
         "--add-data", f"{PROJEKT / 'nc_nastroje' / 'ikony'};nc_nastroje/ikony",
         "--add-data", f"{PROJEKT / 'CO_JE_NOVE.md'};.",
         "--collect-data", "sv_ttk", "--collect-all", "tkinterdnd2",

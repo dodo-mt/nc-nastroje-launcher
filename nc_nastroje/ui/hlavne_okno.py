@@ -291,7 +291,7 @@ class HlavneOkno(TkinterDnD.Tk):
             if akcia == "R":                      # kontrola R: tiež na pozadí (sieť)
                 for z in zhody:
                     try:
-                        na_r[z.rel] = z.cesta(koren_r).is_dir()
+                        na_r[z.rel] = z.cesta_r(koren_r).is_dir()
                     except OSError:
                         na_r[z.rel] = False
             return {"akcia": akcia, "text": text, "zhody": zhody, "na_r": na_r, "chyba": ""}
@@ -330,14 +330,15 @@ class HlavneOkno(TkinterDnD.Tk):
             self._vymaz_pole(text)
             self.spusti_podla_id(zhoda.app_id)
             return
-        cesta = zhoda.cesta(Path(self.nast.koren_r if akcia == "R" else self.nast.koren_l))
+        cesta = zhoda.cesta_r(Path(self.nast.koren_r)) if akcia == "R" else zhoda.cesta(Path(self.nast.koren_l))
         try:
             vyhrada = priecinky.otvor_priecinok(cesta, self.nast.otvarat_v, self.nast.totalcmd_cesta)
             log.info("Otvorená zákazka %s", cesta)
             self._vymaz_pole(text)
             disk = "R:" if akcia == "R" else "L:"
-            self._potvrd(vyhrada or (f"Otvorený zákazník {zhoda.zakaznik} ({disk}\\{zhoda.zakaznik})" if zhoda.je_zakaznik
-                                     else f"Otvorená zákazka {zhoda.zakazka} ({disk}\\{zhoda.zakaznik}\\{zhoda.zakazka})"))
+            zak_disk = zakazky.priecinok_zakaznika_na_r(zhoda.zakaznik) if akcia == "R" else zhoda.zakaznik      # na R: len číslo zákazníka
+            self._potvrd(vyhrada or (f"Otvorený zákazník {zhoda.zakaznik} ({disk}\\{zak_disk})" if zhoda.je_zakaznik
+                                     else f"Otvorená zákazka {zhoda.zakazka} ({disk}\\{zak_disk}\\{zhoda.zakazka})"))
         except OSError as e:
             log.exception("Otvorenie %s zlyhalo", cesta)
             self._upozorni(f"Priečinok sa nepodarilo otvoriť: {e.strerror or e}")

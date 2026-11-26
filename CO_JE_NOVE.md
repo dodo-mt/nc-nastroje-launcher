@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.26-3
+- Interná zmena bez zmeny správania: normalizácia čísla zákazky (`21930`, `OD21930`, `OD626\001252`) je v spoločnom balíku `nc_parsery` (priečinok `NC parsery` vedľa projektu; exe ho obsahuje).
+- **Oprava „Otvoriť R:“**: priečinok zákazníka je na R: len číslo (`R:\101270\OD00021930`), nie celý názov z L: (`101270-Meno firmy`), preto launcher zákazky z R: nenašiel a hlásil „na R: nie je“. Staré značenie (`OD626\001252`) ostáva rovnaké ako na L:.
+
 ## 2026.11.26-2
 - **Súbor → Prehľad počítačov…** (len plný režim): tabuľka počítač × aplikácia s verziami a farbami – zelená aktuálna,
   **oranžová beží stará verzia (treba aplikáciu zavrieť a otvoriť)**, modrá čaká novšia z L:, sivá nie je nainštalovaná,

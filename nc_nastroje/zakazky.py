@@ -20,6 +20,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import NamedTuple
 
+from . import nc_parsery_cesta  # noqa: F401 – pridá priečinok balíka nc_parsery do sys.path
+from nc_parsery.cesty import priecinok_zakaznika_na_r  # noqa: F401 – názov priečinka zákazníka na R: (len číslo)
+from nc_parsery.zakazky import TOKEN_ZAKAZKY as _TOKEN, Dotaz, normalizuj, vyhovuje  # noqa: F401 – normalizácia čísla zákazky je v spoločnom balíku
 from .config import CACHE_DIR
 
 log = logging.getLogger(__name__)
@@ -29,67 +32,7 @@ FORMAT_CACHE = 1
 MAX_VEK_INDEXU = timedelta(days=1)       # index sa obnovuje raz denne
 IGNOROVANE_KORENE = ("_", "$", ".")       # _Nastroje, _Lupa, $RECYCLE.BIN …
 IGNOROVANE_NAZVY = {"system volume information", "recycler"}
-_TOKEN = re.compile(r"^(OD|ON)?(\d+)(?:[-_ .].*)?$", re.IGNORECASE)   # 21930, OD21930, 21930-1A, ON001252
-
-
-# ---------- vstup ----------
-@dataclass(frozen=True)
-class Dotaz:
-    text: str
-    nova: str | None = None           # `OD00021930`
-    stara: str | None = None          # `001252`
-    zakaznik: str | None = None       # začiatok názvu zákazníka (z `OD626\001252` alebo `101270\21930`)
-
-
-def _kluce_zakazky(token: str) -> tuple[str | None, str | None] | None:
-    """(nová, stará) podľa jedného tokenu. None = nepoznáme."""
-    m = _TOKEN.match(token.strip())
-    if not m:
-        return None
-    predpona, cislice = (m.group(1) or "").upper(), m.group(2)
-    n = len(cislice)
-    nova = f"OD{int(cislice):08d}" if n <= 8 else None
-    stara = f"{int(cislice):06d}" if n <= 6 else None
-    if predpona == "OD":
-        stara = None                   # OD… je vždy nové značenie
-    elif predpona == "ON":
-        nova = None                    # ON… je vždy staré značenie
-    elif n >= 7:
-        stara = None
-    if nova is None and stara is None:
-        return None
-    return nova, stara
-
-
-def normalizuj(text: str) -> Dotaz | None:
-    """`21930`, `OD21930`, `OD00021930`, `21930-1A` -> nová `OD00021930` (a pri ≤6 číslicach aj stará `021930`);
-    `ON001252` alebo `OD626\\001252` -> stará. None = nevyzerá ako číslo zákazky."""
-    t = " ".join(str(text or "").replace("/", "\\").split())
-    if not t:
-        return None
-    zakaznik = None
-    if "\\" in t:
-        casti = [c for c in t.split("\\") if c.strip()]
-        if len(casti) < 2:
-            return None
-        zakaznik, t = casti[0].strip(), casti[1].strip()
-        kluce = _kluce_zakazky(t)
-        if kluce is None:
-            return None
-        nova, stara = kluce
-        if re.fullmatch(r"OD\d+", zakaznik, re.IGNORECASE) and nova and not t.upper().startswith("OD"):
-            nova = None                # `OD626\001252`: za starým zákazníkom je stará zákazka
-        return Dotaz(text.strip(), nova, stara, zakaznik)
-    kluce = _kluce_zakazky(t)
-    if kluce is None:
-        return None
-    return Dotaz(text.strip(), kluce[0], kluce[1], None)
-
-
-def vyhovuje(nazov: str, kluc: str) -> bool:
-    """Názov začína kľúčom a hneď za ním nie je číslica (`OD0002193` nesmie sedieť na `OD00021930`)."""
-    n, k = nazov.upper(), kluc.upper()
-    return n.startswith(k) and not (len(n) > len(k) and n[len(k)].isdigit())
+# ---------- vstup: Dotaz, normalizuj, vyhovuje sú v balíku nc_parsery.zakazky (importované vyššie) ----------
 
 
 # ---------- výsledky ----------
@@ -121,6 +64,10 @@ class Zhoda:
 
     def cesta(self, koren: Path) -> Path:
         return Path(koren) / self.zakaznik / self.zakazka
+
+    def cesta_r(self, koren_r: Path) -> Path:
+        """Cesta zákazky na R:. Priečinok zákazníka je tam len číslo (`101270-Meno firmy` → `101270`, programy tam ukladá Triedič NC); staré značenie (`OD626\\001252`) ostáva ako na L:."""
+        return Path(koren_r) / priecinok_zakaznika_na_r(self.zakaznik) / self.zakazka
 
 
 # ---------- index ----------
