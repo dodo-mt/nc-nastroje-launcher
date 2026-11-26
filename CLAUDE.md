@@ -12,6 +12,7 @@ Komunikácia, texty v UI, komentáre a commit správy: **po slovensky**.
 **Verzia:** `nc_nastroje/verzia.py` (`VERZIA = "RRRR.MM.DD-poradie"`). **Po každej zmene kódu verziu zvýš** a dopíš záznam do
 `CO_JE_NOVE.md` (zobrazuje sa v Nápoveda → Čo je nové). Podrobná špecifikácia (JSON príklad, stavy, drag & drop, UI, tray, fázy
 vývoja): `docs/specifikacia_podrobne.md`. Ďalšie: `docs/distribucia.md`, `nasadenie.md`, `prvy_ostry_test.md`.
+CNC znalosti (stroje, prípony, syntax NC a .pof, disky L:\ R:\, vzorky) sú v osobnom skille `cnc-programy` (`%USERPROFILE%\.claude\skills\cnc-programy`).
 
 ## Aplikácie, ktoré launcher spúšťa
 
@@ -30,9 +31,7 @@ ju ako samostatný návrh do `docs/zmeny_v_aplikaciach.md` – urobí sa v repoz
 
 ## Disky a cesty
 
-- `L:\` – zákazky (`L:\<zákazník>\<zákazka>\<pozícia>\…`), priečinky zákazníkov majú za číslom aj meno
-  (`L:\101270-Meno firmy\OD00021930\21930-1A\NC\`). Hľadať podľa **začiatku** názvu. Staré zákazky sú na najvyššej úrovni
-  (`L:\OD626\001252`, predpona `ON` = stará) a **nie sú** totožné s novými `OD00000626`.
+- `L:\` – zákazky (štruktúra, staré zákazky `OD626`, priečinky zákazníkov: skill `cnc-programy`). Hľadať podľa **začiatku** názvu priečinka.
 - `R:\` – zrkadlo L: len s programami na nahratie do strojov.
 - `L:\_Nastroje\` – koreň launchera (nastaviteľný). **L: a R: launcher len číta**, zapisuje iba do `L:\_Nastroje\`
   (publikačný skript; od 2026.11.26-2 aj bežný launcher, ale **výhradne** malý záznam o počítači
