@@ -1,9 +1,10 @@
 """Okno nastavení: ľavý zoznam sekcií, vpravo obsah."""
 import tkinter as tk
 from dataclasses import replace
-from tkinter import filedialog, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from ..config import Nastavenia
+from .. import rychle_spustanie
 from ..katalog import App
 from .tema import FONT, PALETA, Tooltip, centruj, farby_zoznamu
 
@@ -35,21 +36,23 @@ class OknoNastaveni(tk.Toplevel):
         self._po_prihlaseni = tk.BooleanVar(value=nast.spustit_po_prihlaseni)
         self._app_pri_starte = tk.BooleanVar(value=nast.spustat_aplikacie_pri_starte)
         self._odoslat = {a.id: tk.BooleanVar(value=a.id in nast.odoslat_do) for a in self._apps}
+        self._aliasy = {a.id: tk.StringVar(value=nast.aliasy_aplikacii.get(a.id, "")) for a in self._vsetky}
         self._zobrazene = {a.id: tk.BooleanVar(value=a.id not in nast.skryte_aplikacie) for a in self._vsetky}
 
         telo = ttk.Frame(self, padding=16)
         telo.pack(fill="both", expand=True)
         telo.columnconfigure(1, weight=1)
         telo.rowconfigure(0, weight=1)
-        self._sekcie = tk.Listbox(telo, exportselection=False, height=5, width=16, font=(FONT, 10), activestyle="none",
+        self._sekcie = tk.Listbox(telo, exportselection=False, height=6, width=18, font=(FONT, 10), activestyle="none",
                                   **farby_zoznamu())
         self._sekcie.grid(row=0, column=0, sticky="ns", padx=(0, 16))
-        for s in ("Cesty", "Režim", "Aplikácie", "Stavy", "Windows"):
+        for s in ("Cesty", "Režim", "Aplikácie", "Rýchle spúšťanie", "Stavy", "Windows"):
             self._sekcie.insert("end", s)
         self._obsah = ttk.Frame(telo)
         self._obsah.grid(row=0, column=1, sticky="nsew")
         self._strany = {"Cesty": self._cesty(self._obsah), "Režim": self._rezim(self._obsah),
                         "Aplikácie": self._aplikacie(self._obsah),
+                        "Rýchle spúšťanie": self._rychle_spustanie(self._obsah),
                         "Stavy": self._stavy(self._obsah), "Windows": self._windows(self._obsah)}
         self._sekcie.bind("<<ListboxSelect>>", lambda e: self._ukaz())
         self._sekcie.selection_set(0)
@@ -127,6 +130,32 @@ class OknoNastaveni(tk.Toplevel):
                   foreground=PALETA["text2"]).grid(row=2, column=0, sticky="w", pady=(10, 0))
         return f
 
+    def _rychle_spustanie(self, rodic):
+        f = ttk.Frame(rodic)
+        ttk.Label(f, text="Vlastné skratky na spustenie aplikácie z poľa zákazky (aj v rýchlom okne Ctrl+Alt+Q):\n"
+                          "napíšeš skratku alebo začiatok názvu a Enter aplikáciu spustí.",
+                  foreground=PALETA["text2"], justify="left").grid(row=0, column=0, sticky="w", pady=(0, 10))
+        ram = ttk.LabelFrame(f, text="Skratky aplikácií", padding=10)
+        ram.grid(row=1, column=0, sticky="ew")
+        if self._vsetky:
+            for i, a in enumerate(self._vsetky):
+                ttk.Label(ram, text=a.nazov, width=28).grid(row=i, column=0, sticky="w", pady=3)
+                e = ttk.Entry(ram, textvariable=self._aliasy[a.id], width=14)
+                e.grid(row=i, column=1, padx=8)
+                Tooltip(e, f"Skratka pre {a.nazov}, napr. „e“ (prázdne = len podľa názvu). "
+                           "Písmená, číslice, bodka, pomlčka; nesmie vyzerať ako číslo zákazky.")
+        else:
+            ttk.Label(ram, text="Katalóg aplikácií ešte nie je načítaný.", foreground=PALETA["text2"]).grid()
+        ttk.Label(f, text="Aj bez skratky sa aplikácia nájde podľa začiatku názvu (napr. „edi“ → NC Editor).",
+                  foreground=PALETA["text2"]).grid(row=2, column=0, sticky="w", pady=(10, 0))
+        return f
+
+    def _aliasy_vyber(self) -> dict[str, str]:
+        """Zadané skratky + skratky aplikácií, ktoré sa tu nezobrazujú (v tomto režime nedostupné), ostanú, ako boli."""
+        ostatne = {k: v for k, v in self._nast.aliasy_aplikacii.items() if k not in self._aliasy}
+        zadane = {k: rychle_spustanie.normalizuj_alias(v.get()) for k, v in self._aliasy.items()}
+        return {**ostatne, **{k: v for k, v in zadane.items() if v}}
+
     def _stavy(self, rodic):
         f = ttk.Frame(rodic)
         ttk.Label(f, text="Obnovovať stavy aplikácií každých").grid(row=0, column=0, sticky="w", pady=6)
@@ -192,10 +221,19 @@ class OknoNastaveni(tk.Toplevel):
         return ostatne + [i for i, v in self._zobrazene.items() if not v.get()]
 
     def _uloz(self):
+        aliasy = self._aliasy_vyber()
+        for a in self._vsetky:
+            chyba = rychle_spustanie.chyba_aliasu(self._aliasy[a.id].get(), a.id, aliasy)
+            if chyba:
+                self._sekcie.selection_clear(0, "end")
+                self._sekcie.selection_set(3)
+                self._ukaz()
+                messagebox.showwarning("Skratky aplikácií", f"{a.nazov}: {chyba}", parent=self)
+                return
         nast = replace(self._nast, skryte_aplikacie=self._skryte_vyber(), **{k: v.get().strip() for k, v in self._v.items()},
                        interval_stavov_s=self._interval.get().strip(),
                        spustit_po_prihlaseni=bool(self._po_prihlaseni.get()),
                        spustat_aplikacie_pri_starte=bool(self._app_pri_starte.get()),
-                       odoslat_do=self._odoslat_vyber())
+                       odoslat_do=self._odoslat_vyber(), aliasy_aplikacii=aliasy)
         self.destroy()
         self._pri_ulozeni(nast)

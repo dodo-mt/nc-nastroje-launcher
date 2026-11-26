@@ -1,5 +1,12 @@
 # Čo je nové
 
+## 2026.11.26-1
+- **Spúšťanie aplikácií z poľa zákazky** (hlavné okno, zobrazenie B, okno z tray aj rýchle okno Ctrl+Alt+Q):
+  napíš názov alebo skratku aplikácie (napr. „edi“, „nastr“, „e“) a Enter ju spustí. Návrhy aplikácií sú nad zákazkami,
+  šípky vyberajú. Číslo zákazky aplikáciu nikdy nenavrhne, takže Enter na čísle ostáva „otvoriť na L:“.
+- Nastavenia → **Rýchle spúšťanie**: vlastná skratka ku každej aplikácii (kontrola duplicít a čísla zákazky).
+  Skratky sú len na tomto počítači. V režime Na prezeranie sa aplikácie len pre programátora nenavrhujú.
+
 ## 2026.11.25-35
 - **Rýchle okno na skratke** (predvolene Ctrl+Alt+Q, Nastavenia → Klávesová skratka → Rýchle okno, prázdne = vypnuté):
   minimalistické okno uprostred obrazovky len s poľom a ikonou NC Nástrojov, zaoblené rohy, mierna priesvitnosť.

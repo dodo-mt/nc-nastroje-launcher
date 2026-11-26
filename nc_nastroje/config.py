@@ -42,6 +42,7 @@ class Nastavenia:
     skratka_rychle_okno: str = "Ctrl+Alt+Q"  # globálna skratka na rýchle okno (pole zákazky + tlačidlá; prázdne = vypnuté)
     otvarat_v: str = "prieskumnik"             # kde sa otvára priečinok zákazky: prieskumnik | totalcmd
     totalcmd_cesta: str = ""                   # exe alebo priečinok Total Commandera (prázdne = nájde sa sám)
+    aliasy_aplikacii: dict = field(default_factory=dict)   # id aplikácie -> vlastná skratka na rýchle spustenie z poľa zákazky
     port_instancie: int = 47653                # lokálny port pre jednu inštanciu launchera (127.0.0.1)
     tray_oznamenie_ukazane: bool = False       # oznámenie „beží v oblasti oznámení“ sa ukáže len raz
 
@@ -64,6 +65,9 @@ class Nastavenia:
         self.totalcmd_cesta = str(self.totalcmd_cesta or "")
         self.klavesova_skratka = str(self.klavesova_skratka or "").strip()
         self.skratka_rychle_okno = str(self.skratka_rychle_okno or "").strip()
+        if not isinstance(self.aliasy_aplikacii, dict):
+            self.aliasy_aplikacii = {}
+        self.aliasy_aplikacii = {str(k): str(v).strip() for k, v in self.aliasy_aplikacii.items() if str(v).strip()}
         if not isinstance(self.skryte_aplikacie, list):
             self.skryte_aplikacie = []
         self.skryte_aplikacie = [str(x) for x in self.skryte_aplikacie]

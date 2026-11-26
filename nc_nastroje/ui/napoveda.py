@@ -21,6 +21,9 @@ Dvojklik na ikonu v oblasti oznámení otvorí okno.
 Zákazka: do poľa hore napíš číslo (napr. 21930, OD21930, OD00021930 alebo starú 001252, OD626/001252)
 a stlač Enter (otvorí priečinok na L:) alebo tlačidlo Otvoriť R: / Hľadať v Lupe.
 
+Aplikácia: do toho istého poľa (aj v rýchlom okne Ctrl+Alt+Q) napíš názov alebo vlastnú skratku
+(napr. „edi“ alebo „e“) a Enter aplikáciu spustí. Skratky si nastavíš v Nastaveniach → Rýchle spúšťanie.
+
 Zobrazenie: Zobraziť → Dlaždice alebo Zoznam + detail. Zobraziť → Tmavý režim.
 V zozname klikni na aplikáciu, vpravo uvidíš jej detail. Pravé tlačidlo = ďalšie akcie.
 

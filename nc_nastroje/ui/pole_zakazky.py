@@ -4,11 +4,14 @@ import re
 import tkinter as tk
 from tkinter import ttk
 
+from PIL import Image, ImageTk
+
+from ..config import IKONY_DIR
 from .tema import FONT, PALETA, zaobli_okno
 
-MIN_ZNAKOV = 2          # od koľkých znakov sa ukážu návrhy
+MIN_ZNAKOV = 1          # od koľkých znakov sa ukážu návrhy (zákazky si hranicu 2 znaky strážia v návrhoch samy)
 ZDRZANIE_MS = 200       # krátka pauza po písaní
-PATKA = "Enter = otvoriť · ↑↓ výber · Esc zavrieť"
+PATKA = "Enter = otvoriť / spustiť · ↑↓ výber · Esc zavrieť"
 MIN_SIRKA = 460         # ako v Lupe: číslo, zákazník, doplnok
 
 
@@ -37,6 +40,7 @@ class PoleZakazky(ttk.Entry):
         self._viditelne = False
         self._geo = self._kluc = None
         self._riadky: list = []
+        self._ikony: dict = {}                                  # ikony aplikácií v návrhoch (musia ostať v pamäti)
         self._i = -1
         self._casovac = None
         self._skry_casovac = None
@@ -152,7 +156,7 @@ class PoleZakazky(ttk.Entry):
         Pri písaní sa okno nezruší: nezmenený zoznam sa neprekreslí, zmenený sa vymení vnútri a okno sa len upraví."""
         if self._popup is None:
             self._vytvor_okna()
-        kluc = (tuple((h.zakaznik, h.zakazka, h.pocet) for h in self._zhody), self._viac, self.text().casefold())
+        kluc = (tuple(repr(h) for h in self._zhody), self._viac, self.text().casefold())
         if self._viditelne and kluc == self._kluc:
             return
         t = PALETA
@@ -160,7 +164,8 @@ class PoleZakazky(ttk.Entry):
         self._riadky, self._i = [], -1
         skupina_pred = None
         for i, h in enumerate(self._zhody):
-            skupina = "ZÁKAZNÍCI" if h.je_zakaznik else "ZÁKAZKY"
+            skupina = ("APLIKÁCIE" if getattr(h, "je_aplikacia", False)
+                       else "ZÁKAZNÍCI" if h.je_zakaznik else "ZÁKAZKY")
             if skupina != skupina_pred:
                 skupina_pred = skupina
                 tk.Label(karta, text=skupina, bg=t["karta"], fg=t["text2"], font=(FONT, 8, "bold"),
@@ -202,6 +207,8 @@ class PoleZakazky(ttk.Entry):
         r = tk.Frame(rodic, bg=t["karta"], cursor="hand2")
         r.pack(fill="x", padx=4, pady=1)
         widgety = [r]
+        if getattr(h, "je_aplikacia", False):
+            return self._riadok_aplikacie(r, i, h, widgety)
         nazov = h.zakaznik if h.je_zakaznik else h.zakazka
         prvy = True
         for text, tucne in self._rozdel(nazov):
@@ -218,6 +225,37 @@ class PoleZakazky(ttk.Entry):
         w = tk.Label(r, text=sub, bg=t["karta"], fg=t["text2"], font=(FONT, 9), anchor="w")
         w.pack(side="left", padx=(14, 10), fill="x", expand=True)
         widgety.append(w)
+        for x in widgety:
+            x.bind("<Enter>", lambda e, i=i: self._oznac(i, mys=True))
+            x.bind("<Button-1>", lambda e, i=i: self._klik(i))
+        return widgety
+
+    def _ikona_aplikacie(self, h):
+        """Ikona 22 px (z priečinka ikon); chýbajúca ikona = bez ikony."""
+        if h.app_id not in self._ikony:
+            try:
+                self._ikony[h.app_id] = ImageTk.PhotoImage(
+                    Image.open(IKONY_DIR / h.ikona).convert("RGBA").resize((22, 22), Image.LANCZOS))
+            except (OSError, ValueError):
+                self._ikony[h.app_id] = None
+        return self._ikony[h.app_id]
+
+    def _riadok_aplikacie(self, r, i: int, h, widgety: list) -> list:
+        """Riadok návrhu aplikácie: ikona, názov, popis a vpravo skratka (ak je nastavená)."""
+        t = PALETA
+        ikona = self._ikona_aplikacie(h)
+        prvky = []
+        if ikona is not None:
+            prvky.append(tk.Label(r, image=ikona, bg=t["karta"]))
+            prvky[-1].pack(side="left", padx=(10, 0), pady=4)
+        prvky.append(tk.Label(r, text=h.nazov, bg=t["karta"], fg=t["text"], anchor="w", font=(FONT, 10, "bold")))
+        prvky[-1].pack(side="left", padx=(10, 0), pady=5)
+        prvky.append(tk.Label(r, text=h.popis, bg=t["karta"], fg=t["text2"], anchor="w", font=(FONT, 9)))
+        prvky[-1].pack(side="left", padx=(14, 10), fill="x", expand=True)
+        if h.alias:
+            prvky.append(tk.Label(r, text=h.alias, bg=t["karta"], fg=t["text2"], font=("Consolas", 9)))
+            prvky[-1].pack(side="right", padx=(0, 12))
+        widgety.extend(prvky)
         for x in widgety:
             x.bind("<Enter>", lambda e, i=i: self._oznac(i, mys=True))
             x.bind("<Button-1>", lambda e, i=i: self._klik(i))
@@ -306,9 +344,28 @@ class PoleZakazky(ttk.Entry):
         if self._otvorene() and self._vybrane_sipkou and self._i >= 0:
             self._vyber(self._i)
             return "break"
+        app = self._prva_aplikacia()
+        if app is not None:                                     # napísaný názov / skratka aplikácie + Enter = spustiť
+            self._skry()
+            if self._pri_vybere:
+                self._pri_vybere(app)
+            return "break"
         self._skry()
         self._pri_enter()
         return "break"
+
+    def _prva_aplikacia(self):
+        """Prvý návrh, ak je to aplikácia (Enter bez výberu šípkou ju spustí). Návrhy aplikácií sa nikdy neukážu
+        pri čísle zákazky, takže Enter na čísle ostáva „otvoriť na L:“."""
+        zhody = self._zhody if self._otvorene() else None
+        if zhody is None:
+            if self._navrhy is None or not self.text():
+                return None
+            try:
+                zhody = list(self._navrhy(self.text()).polozky)
+            except Exception:
+                return None
+        return zhody[0] if zhody and getattr(zhody[0], "je_aplikacia", False) else None
 
     def _klavesa(self, fn):
         """Ďalšia akcia na klávese (napr. Shift+Enter): zoznam sa zavrie a akcia sa vykoná."""

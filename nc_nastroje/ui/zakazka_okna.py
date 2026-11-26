@@ -163,7 +163,7 @@ class RychleOkno(tk.Toplevel):
                                  pri_vybere=lambda z: (self.destroy(), pri_navrhu(z)) if pri_navrhu else None,
                                  klavesy={"<Shift-Return>": lambda: self._akcia("R"),
                                           "<Control-Return>": lambda: self._akcia("lupa")},
-                                 patka="Enter = L: · Shift+Enter = R: · Ctrl+Enter = Lupa · Esc = zavrieť")
+                                 patka="Enter = L: / spustiť aplikáciu · Shift+Enter = R: · Ctrl+Enter = Lupa · Esc = zavrieť")
         self._pole.pack(side="left", fill="x", expand=True, ipady=8)
         self._tip = Tooltip(self._pole, "Enter = otvoriť na L: · Shift+Enter = R: · Ctrl+Enter = hľadať v Lupe · Esc = zavrieť")
         self.bind("<Escape>", lambda e: self.destroy())

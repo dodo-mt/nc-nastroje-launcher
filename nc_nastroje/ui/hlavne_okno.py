@@ -21,7 +21,7 @@ from ..katalog import App, filtruj_rezim
 from ..pozadie import Pozadie
 from ..verzia import VERZIA
 from . import napoveda
-from .. import klavesova_skratka, priecinky
+from .. import klavesova_skratka, priecinky, rychle_spustanie
 from .dlazdica import Dlazdica
 from .nasadenie_okno import OknoNasadenia
 from .nastavenia import OknoNastaveni
@@ -227,9 +227,13 @@ class HlavneOkno(TkinterDnD.Tk):
         """Pole zákazky v práve zobrazenom pohľade (A: horný riadok, B: ľavý panel)."""
         return self._b.pole if self._zobrazenie == "B" and self._b else self.pole
 
-    def navrhy_zakaziek(self, text: str) -> list:
-        """Návrhy pod poľom zákazky (len z cache v pamäti)."""
-        return self._index.navrhy(text)
+    def navrhy_zakaziek(self, text: str):
+        """Návrhy pod poľom: najprv aplikácie (skratka / názov), potom zákazky a zákazníci (len z cache v pamäti)."""
+        aplikacie = rychle_spustanie.najdi_aplikacie(text, self.apps, self.nast.aliasy_aplikacii)
+        if len(text.strip()) < 2:                       # zákazky a zákazníci až od 2 znakov
+            return zakazky.Navrhy(aplikacie, 0)
+        n = self._index.navrhy(text, max_riadkov=max(4, zakazky.MAX_NAVRHOV - len(aplikacie)))
+        return zakazky.Navrhy(aplikacie + list(n.polozky), n.viac)
 
     def otvor_navrh(self, zhoda):
         """Klik / Enter na návrhu = otvoriť na L:."""
@@ -320,6 +324,10 @@ class HlavneOkno(TkinterDnD.Tk):
                 pole.vymaz()
 
     def _otvor_zhodu(self, zhoda, akcia: str, text: str = ""):
+        if getattr(zhoda, "je_aplikacia", False):               # návrh aplikácie z poľa: spustiť (akcia R sa ignoruje)
+            self._vymaz_pole(text)
+            self.spusti_podla_id(zhoda.app_id)
+            return
         cesta = zhoda.cesta(Path(self.nast.koren_r if akcia == "R" else self.nast.koren_l))
         try:
             vyhrada = priecinky.otvor_priecinok(cesta, self.nast.otvarat_v, self.nast.totalcmd_cesta)
