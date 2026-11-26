@@ -7,7 +7,7 @@ from tkinter import ttk
 from .tema import FONT, PALETA
 
 MIN_ZNAKOV = 2          # od koľkých znakov sa ukážu návrhy
-ZDRZANIE_MS = 120       # krátka pauza po písaní
+ZDRZANIE_MS = 200       # krátka pauza po písaní
 MIN_SIRKA = 460         # ako v Lupe: číslo, zákazník, doplnok
 
 
@@ -28,6 +28,10 @@ class PoleZakazky(ttk.Entry):
         self._zhody: list = []
         self._viac = 0
         self._popup: tk.Toplevel | None = None
+        self._tien: tk.Toplevel | None = None
+        self._karta: tk.Frame | None = None
+        self._viditelne = False
+        self._geo = self._kluc = None
         self._riadky: list = []
         self._i = -1
         self._casovac = None
@@ -40,7 +44,7 @@ class PoleZakazky(ttk.Entry):
         self.bind("<Down>", lambda e: self._posun(1))
         self.bind("<Up>", lambda e: self._posun(-1))
         self.bind("<Escape>", self._esc)
-        self.bind("<Destroy>", lambda e: self._skry(), add="+")
+        self.bind("<Destroy>", lambda e: self._zrus_popup(), add="+")
         self.bind("<Map>", lambda e: self._napoj_okno(), add="+")
         self._vloz_navod()
 
@@ -83,7 +87,7 @@ class PoleZakazky(ttk.Entry):
     def prefarbi(self):
         """Po prepnutí svetlý/tmavý režim: farba textu podľa toho, či je vidieť návod."""
         self.configure(foreground=PALETA["text2"] if self._navod_aktivny else PALETA["text"])
-        self._skry()
+        self._zrus_popup()
 
     # ----- návrhy -----
     def _napoj_okno(self):
@@ -117,25 +121,33 @@ class PoleZakazky(ttk.Entry):
             return
         self._ukaz()
 
-    def _ukaz(self):
-        """Okno ako v Lupe: biela karta, hlavičky skupín, číslo zákazky + zákazník, pätka s ovládaním."""
-        self._zrus_popup()
-        t = PALETA
+    def _vytvor_okna(self):
+        """Okno návrhov a jeho tieň sa vytvoria raz a potom sa len skrývajú / ukazujú (nové okno by pri písaní blikalo)."""
         tien = tk.Toplevel(self)                                # tieň: tmavé polopriehľadné okno kúsok vedľa
         tien.withdraw()                                         # ukáže sa až na správnom mieste (nie v rohu obrazovky)
         tien.overrideredirect(True)
         tien.attributes("-topmost", True)
         tien.attributes("-alpha", 0.22)
         tien.configure(bg="#000000")
-        self._tien = tien
         popup = tk.Toplevel(self)
         popup.withdraw()
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
         popup.configure(bg=_farba_rama())                       # rámik výraznejší ako okraje kariet v okne
-        karta = tk.Frame(popup, bg=t["karta"])
-        karta.pack(fill="both", expand=True, padx=1, pady=1)
-        self._popup, self._riadky, self._i = popup, [], -1
+        popup.bind("<Escape>", self._esc)
+        self._popup, self._tien, self._karta, self._geo, self._kluc = popup, tien, None, None, None
+
+    def _ukaz(self):
+        """Okno ako v Lupe: biela karta, hlavičky skupín, číslo zákazky + zákazník, pätka s ovládaním.
+        Pri písaní sa okno nezruší: nezmenený zoznam sa neprekreslí, zmenený sa vymení vnútri a okno sa len upraví."""
+        if self._popup is None:
+            self._vytvor_okna()
+        kluc = (tuple((h.zakaznik, h.zakazka, h.pocet) for h in self._zhody), self._viac, self.text().casefold())
+        if self._viditelne and kluc == self._kluc:
+            return
+        t = PALETA
+        karta = tk.Frame(self._popup, bg=t["karta"])            # nová karta sa postaví vedľa starej a až potom ju vymení
+        self._riadky, self._i = [], -1
         skupina_pred = None
         for i, h in enumerate(self._zhody):
             skupina = "ZÁKAZNÍCI" if h.je_zakaznik else "ZÁKAZKY"
@@ -149,20 +161,30 @@ class PoleZakazky(ttk.Entry):
                      font=(FONT, 9), anchor="w").pack(fill="x", padx=14, pady=(4, 0))
         tk.Label(karta, text="Enter = otvoriť · ↑↓ výber · Esc zavrieť", bg=t["karta"], fg=t["text2"],
                  font=(FONT, 9), anchor="w").pack(fill="x", padx=14, pady=(4, 6))
-        popup.bind("<Escape>", self._esc)
         self.update_idletasks()
         sirka = max(self.winfo_width(), MIN_SIRKA)
-        vyska, x, y = popup.winfo_reqheight(), self.winfo_rootx(), self.winfo_rooty() + self.winfo_height() + 2
-        popup.geometry(f"{sirka}x{vyska}+{x}+{y}")
-        tien.geometry(f"{sirka + 4}x{vyska + 4}+{x + 1}+{y + 3}")
-        tien.update_idletasks()
-        popup.update_idletasks()
-        tien.geometry(f"{sirka + 4}x{vyska + 4}+{x + 1}+{y + 3}")
-        popup.geometry(f"{sirka}x{vyska}+{x}+{y}")           # po update_idletasks znova: Windows inak okno nechá v rohu
-        tien.deiconify()
-        popup.deiconify()
-        tien.lift()
-        popup.lift()
+        vyska = karta.winfo_reqheight() + 2
+        x, y = self.winfo_rootx(), self.winfo_rooty() + self.winfo_height() + 2
+        stara = self._karta
+        karta.pack(fill="both", expand=True, padx=1, pady=1)
+        if stara is not None:
+            stara.destroy()
+        self._karta, self._kluc = karta, kluc
+        geo = (sirka, vyska, x, y)
+        if geo != self._geo or not self._viditelne:
+            self._popup.geometry(f"{sirka}x{vyska}+{x}+{y}")
+            self._tien.geometry(f"{sirka + 4}x{vyska + 4}+{x + 1}+{y + 3}")
+            if not self._viditelne:
+                self._popup.update_idletasks()
+                self._tien.update_idletasks()
+                self._tien.geometry(f"{sirka + 4}x{vyska + 4}+{x + 1}+{y + 3}")
+                self._popup.geometry(f"{sirka}x{vyska}+{x}+{y}")    # po update_idletasks znova: Windows inak okno nechá v rohu
+                self._tien.deiconify()
+                self._popup.deiconify()
+                self._viditelne = True
+            self._geo = geo
+        self._tien.lift()
+        self._popup.lift()
 
     def _riadok(self, rodic, i: int, h) -> list:
         """Jeden riadok návrhu; vráti jeho widgety (pozadie sa mení pri výbere)."""
@@ -213,26 +235,37 @@ class PoleZakazky(ttk.Entry):
         self._vybrane_sipkou = not mys
 
     def _zrus_popup(self):
-        for okno in (self._popup, getattr(self, "_tien", None)):
+        """Úplný zánik okien (zmena témy, zánik poľa)."""
+        for okno in (self._popup, self._tien):
             if okno is not None:
                 try:
                     okno.destroy()
                 except tk.TclError:
                     pass
-        self._popup, self._tien, self._riadky, self._i = None, None, [], -1
+        self._popup = self._tien = self._karta = self._geo = self._kluc = None
+        self._riadky, self._i, self._viditelne = [], -1, False
 
     def _skry(self):
+        """Zatvorenie zoznamu: okná sa len skryjú (pri ďalšom písaní sa použijú znova)."""
         if self._casovac:
             try:
                 self.after_cancel(self._casovac)
             except tk.TclError:
                 pass
             self._casovac = None
-        self._zrus_popup()
+        if self._popup is not None and self._viditelne:
+            try:
+                self._tien.withdraw()
+                self._popup.withdraw()
+            except tk.TclError:
+                self._zrus_popup()
+        self._viditelne = False
+        self._kluc = self._geo = None
+        self._riadky, self._i = [], -1
         self._vybrane_sipkou = False
 
     def _otvorene(self) -> bool:
-        return self._popup is not None
+        return self._popup is not None and self._viditelne
 
     def _posun(self, krok: int):
         if not self._otvorene():

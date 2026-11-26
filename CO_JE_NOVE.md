@@ -1,5 +1,9 @@
 # Čo je nové
 
+## 2026.11.25-34
+- Okno návrhov pod poľom zákazky už pri písaní **nebliká**: nezaniká a nevzniká nanovo, mení sa len jeho obsah
+  (nezmenený zoznam sa neprekresľuje). Obnovenie návrhov po krátkej pauze 200 ms.
+
 ## 2026.11.25-33
 - Pole „Číslo zákazky / výkresu“ ukazuje počas písania **návrhy** (od 2 znakov) vo vzhľade ako v Lupe: zákazky podľa čísla
   a zákazníkov podľa čísla alebo mena. Šípky vyberajú, Enter alebo klik otvorí priečinok (Prieskumník, alebo záložka
