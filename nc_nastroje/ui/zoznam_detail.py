@@ -326,7 +326,8 @@ class ZoznamDetail(tk.Frame):
         lavy = tk.Frame(self, bg=t["pozadie"], width=SIRKA_ZOZNAMU)
         lavy.pack(side="left", fill="y")
         lavy.pack_propagate(False)
-        self.pole = PoleZakazky(lavy, lambda: okno.rychla_akcia("L"), "Číslo zákazky / výkresu…", font=(FONT, 11))
+        self.pole = PoleZakazky(lavy, lambda: okno.rychla_akcia("L"), "Číslo zákazky / výkresu…", font=(FONT, 11),
+                                navrhy=okno.navrhy_zakaziek, pri_vybere=okno.otvor_navrh)
         self.pole.pack(fill="x", padx=16, pady=(16, 6), ipady=3)
         self.pole_tip = Tooltip(self.pole, "")
         akcie = tk.Frame(lavy, bg=t["pozadie"])

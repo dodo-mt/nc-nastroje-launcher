@@ -18,6 +18,7 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import NamedTuple
 
 from .config import CACHE_DIR
 
@@ -92,10 +93,23 @@ def vyhovuje(nazov: str, kluc: str) -> bool:
 
 
 # ---------- výsledky ----------
+MAX_NAVRHOV = 12                  # riadkov v zozname návrhov (ako v Lupe)
+MAX_NAVRH_ZAKAZNIKOV = 4          # z toho najviac zákazníkov (ak zákaziek je málo, zákazníci zaberú viac)
+
+
+class Navrhy(NamedTuple):
+    polozky: list                 # najprv zákazky, potom zákazníci (Zhoda s prázdnou zakazka)
+    viac: int                     # koľko ďalších zhôd sa do zoznamu nezmestilo
+
 @dataclass(frozen=True)
 class Zhoda:
     zakaznik: str
-    zakazka: str
+    zakazka: str                      # "" = zhoda je samotný zákazník (návrhy pod poľom)
+    pocet: int = 0                    # pri zákazníkovi: počet zákaziek (len pre zobrazenie)
+
+    @property
+    def je_zakaznik(self) -> bool:
+        return not self.zakazka
 
     @property
     def rel(self) -> str:
@@ -221,6 +235,58 @@ class IndexZakaziek:
                 except OSError as e:
                     log.warning("Cache zákaziek sa nepodarilo uložiť: %s", e)
         return _zorad(zhody)
+
+    def navrhy(self, text: str, max_riadkov: int = MAX_NAVRHOV, max_zakaznikov: int = MAX_NAVRH_ZAKAZNIKOV) -> Navrhy:
+        """Návrhy počas písania (len cache v pamäti, bez siete).
+        Zákazky: ČÍSLO (bez núl na začiatku) začína písaným číslom; `OD…` = len nové, `ON…` = len staré,
+        `zákazník\číslo` zúži na zákazníka. Zákazníci: číslo pred pomlčkou (`101270`) alebo časť mena
+        (všetky slová musia sedieť). Zákazky idú pred zákazníkmi; zákazníci majú vyhradené miesta."""
+        t = " ".join(str(text or "").replace("/", "\\").split())
+        zakaznik_filter = None
+        if "\\" in t:
+            zakaznik_filter, _, t = t.partition("\\")
+            zakaznik_filter = zakaznik_filter.strip().casefold()
+        m = re.fullmatch(r"(OD|ON)?\s*(\d+)", t.strip(), re.IGNORECASE)
+        slova = [w for w in t.casefold().split() if w]
+        if not m and (zakaznik_filter is not None or not slova):
+            return Navrhy([], 0)
+        predpona, cislo = ((m.group(1) or "").upper(), m.group(2).lstrip("0")) if m else ("", "")
+        if m and not cislo:
+            return Navrhy([], 0)
+        joby_zhody: list[Zhoda] = []
+        zakaznici_zhody: list[tuple[int, Zhoda]] = []
+        with self._zamok:
+            for zak, joby in self._zakaznici.items():
+                if zakaznik_filter and not zak.casefold().startswith(zakaznik_filter):
+                    continue
+                if m and zakaznik_filter is None:
+                    prvy = zak.split("-")[0]
+                    if predpona:
+                        sedi = zak.casefold().startswith(t.replace(" ", "").casefold())
+                    else:
+                        sedi = re.sub(r"^(OD|ON)", "", prvy, flags=re.IGNORECASE).lstrip("0").startswith(cislo)
+                    if sedi:
+                        zakaznici_zhody.append((0, Zhoda(zak, "", len(joby))))
+                elif not m:
+                    nazov = zak.casefold()
+                    if all(w in nazov for w in slova):
+                        zakaznici_zhody.append((0 if nazov.startswith(slova[0]) else 1, Zhoda(zak, "", len(joby))))
+                if not m:
+                    continue
+                for job in joby:
+                    mj = _TOKEN.match(job)
+                    if not mj:
+                        continue
+                    stara = bool(re.match(r"^\d{6}", job))
+                    if (predpona == "OD" and stara) or (predpona == "ON" and not stara):
+                        continue
+                    if mj.group(2).lstrip("0").startswith(cislo):
+                        joby_zhody.append(Zhoda(zak, job))
+        joby_zhody = _zorad(joby_zhody)
+        zakaznici = [z for _, z in sorted(zakaznici_zhody, key=lambda x: (x[0], x[1].zakaznik.lower()))]
+        nz = min(len(zakaznici), max(max_zakaznikov, max_riadkov - len(joby_zhody)))
+        polozky = joby_zhody[:max_riadkov - nz] + zakaznici[:nz]
+        return Navrhy(polozky, len(joby_zhody) + len(zakaznici) - len(polozky))
 
     def najdi(self, dotaz: Dotaz) -> list[Zhoda]:
         """Cache; ak v nej zákazka nie je, priamy prechod (doplní cache)."""

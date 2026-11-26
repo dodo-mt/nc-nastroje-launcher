@@ -203,7 +203,8 @@ class HlavneOkno(TkinterDnD.Tk):
         r.pack(fill="x", padx=20, pady=(16, 12))
         self._horny_riadok = r
         r.columnconfigure(0, weight=1)
-        self.pole = PoleZakazky(r, lambda: self.rychla_akcia("L"), PLACEHOLDER)
+        self.pole = PoleZakazky(r, lambda: self.rychla_akcia("L"), PLACEHOLDER,
+                                navrhy=self.navrhy_zakaziek, pri_vybere=self.otvor_navrh)
         self.pole.grid(row=0, column=0, sticky="ew", ipady=4, padx=(0, 12))
         self._pole_tip = Tooltip(self.pole, "")
         self._aktualizuj_tip_indexu()
@@ -224,6 +225,14 @@ class HlavneOkno(TkinterDnD.Tk):
     def aktivne_pole(self) -> PoleZakazky:
         """Pole zákazky v práve zobrazenom pohľade (A: horný riadok, B: ľavý panel)."""
         return self._b.pole if self._zobrazenie == "B" and self._b else self.pole
+
+    def navrhy_zakaziek(self, text: str) -> list:
+        """Návrhy pod poľom zákazky (len z cache v pamäti)."""
+        return self._index.navrhy(text)
+
+    def otvor_navrh(self, zhoda):
+        """Klik / Enter na návrhu = otvoriť na L:."""
+        self._otvor_zhodu(zhoda, "L", self._pole_text())
 
     def _pole_text(self) -> str:
         return self.aktivne_pole().text()
@@ -315,7 +324,9 @@ class HlavneOkno(TkinterDnD.Tk):
             vyhrada = priecinky.otvor_priecinok(cesta, self.nast.otvarat_v, self.nast.totalcmd_cesta)
             log.info("Otvorená zákazka %s", cesta)
             self._vymaz_pole(text)
-            self._potvrd(vyhrada or f"Otvorená zákazka {zhoda.zakazka} ({'R:' if akcia == 'R' else 'L:'}\\{zhoda.zakaznik}\\{zhoda.zakazka})")
+            disk = "R:" if akcia == "R" else "L:"
+            self._potvrd(vyhrada or (f"Otvorený zákazník {zhoda.zakaznik} ({disk}\\{zhoda.zakaznik})" if zhoda.je_zakaznik
+                                     else f"Otvorená zákazka {zhoda.zakazka} ({disk}\\{zhoda.zakaznik}\\{zhoda.zakazka})"))
         except OSError as e:
             log.exception("Otvorenie %s zlyhalo", cesta)
             self._upozorni(f"Priečinok sa nepodarilo otvoriť: {e.strerror or e}")
@@ -1023,7 +1034,8 @@ class HlavneOkno(TkinterDnD.Tk):
             okno.lift()
             okno.focus_force()
             return
-        self._okno_zakazky = OknoZakazky(self, self.rychla_akcia)
+        self._okno_zakazky = OknoZakazky(self, self.rychla_akcia, navrhy=self.navrhy_zakaziek,
+                                         pri_navrhu=lambda z: self._otvor_zhodu(z, "L"))
         self._okno_zakazky.nastav_popisky(priecinky.popisky_otvorenia(self.nast.otvarat_v, self.nast.totalcmd_cesta))
 
     def _oznam(self, text: str):

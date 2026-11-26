@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from ..zakazky import Zhoda
+from .pole_zakazky import PoleZakazky
 from .tema import FONT, PALETA, Tooltip, centruj, farby_zoznamu
 
 
@@ -78,7 +79,7 @@ class NenaslaZakazku(tk.Toplevel):
 class OknoZakazky(tk.Toplevel):
     """Malé okno s poľom (tray → Otvoriť zákazku…). Nie je pripojené k hlavnému oknu, takže sa ukáže aj keď je skryté."""
 
-    def __init__(self, rodic, pri_akcii):
+    def __init__(self, rodic, pri_akcii, navrhy=None, pri_navrhu=None):
         super().__init__(rodic)
         self.title("Otvoriť zákazku")
         self.resizable(False, False)
@@ -86,7 +87,9 @@ class OknoZakazky(tk.Toplevel):
         telo = ttk.Frame(self, padding=16)
         telo.pack(fill="both", expand=True)
         ttk.Label(telo, text="Číslo zákazky / výkresu", font=(FONT, 11)).pack(anchor="w")
-        self._pole = ttk.Entry(telo, font=(FONT, 12), width=34)
+        self._pole = PoleZakazky(telo, lambda: self._akcia("L"), "Napr. 21930 alebo názov zákazníka", navrhy=navrhy,
+                                 pri_vybere=lambda z: (self.destroy(), pri_navrhu(z)) if pri_navrhu else None)
+        self._pole.configure(width=34)
         self._pole.pack(fill="x", pady=(6, 12), ipady=4)
         Tooltip(self._pole, "Napr. 21930, OD21930, OD00021930 alebo OD626\\001252 (Enter = otvoriť na L:)")
         tl = ttk.Frame(telo)
@@ -100,7 +103,6 @@ class OknoZakazky(tk.Toplevel):
             tp = Tooltip(b, tip)
             if akcia in ("L", "R"):
                 self._tl[akcia] = (b, tp)
-        self._pole.bind("<Return>", lambda e: self._akcia("L"))
         self.bind("<Escape>", lambda e: self.destroy())
         centruj(self, rodic)
         self.attributes("-topmost", True)
@@ -115,7 +117,7 @@ class OknoZakazky(tk.Toplevel):
             tp.text = pop[a][2]
 
     def _akcia(self, akcia: str):
-        text = self._pole.get().strip()
+        text = self._pole.text()
         if not text:
             self._pole.focus_set()
             return

@@ -1,5 +1,11 @@
 # Čo je nové
 
+## 2026.11.25-33
+- Pole „Číslo zákazky / výkresu“ ukazuje počas písania **návrhy** (od 2 znakov) vo vzhľade ako v Lupe: zákazky podľa čísla
+  a zákazníkov podľa čísla alebo mena. Šípky vyberajú, Enter alebo klik otvorí priečinok (Prieskumník, alebo záložka
+  v Total Commanderi, ak je nastavený), Esc zavrie návrhy (druhé Esc vymaže text).
+- Návrhy sú aj v okne „Otvoriť zákazku…“ z tray a v zobrazení B.
+
 ## 2026.11.25-32
 - Dlaždice lícujú s horným riadkom: pole zákazky začína presne nad ľavou dlaždicou a tlačidlo Hľadať v Lupe končí
   presne nad pravou (predtým boli dlaždice o 6 px odsadené). Rovnako lícujú aj pruhy (upozornenia, ťahanie súborov).
