@@ -14,7 +14,7 @@ import sv_ttk
 from PIL import ImageTk
 from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
 
-from .. import aktualizacie, dnd, ovladanie, spustac, stavy, tray, windows_integracia, zakazky
+from .. import aktualizacie, dnd, ovladanie, pocitace, spustac, stavy, tray, windows_integracia, zakazky
 from ..config import LOCAL_DIR, NASTAVENIA_SUBOR, Nastavenia, nacitaj_nastavenia, uloz_nastavenia
 from ..ikona import vytvor_ikonu
 from ..katalog import App, filtruj_rezim
@@ -25,6 +25,7 @@ from .. import klavesova_skratka, priecinky, rychle_spustanie
 from .dlazdica import Dlazdica
 from .nasadenie_okno import OknoNasadenia
 from .nastavenia import OknoNastaveni
+from .pocitace_okno import PocitaceOkno
 from . import tema
 from .pole_zakazky import PoleZakazky
 from .prve_spustenie import PrveSpustenie, Volby, volby_na_nastavenia
@@ -169,6 +170,7 @@ class HlavneOkno(TkinterDnD.Tk):
         subor.add_command(label="Obnoviť stavy a aplikácie", accelerator="F5", command=self.obnov_rucne)
         subor.add_command(label="Obnoviť index zákaziek", command=lambda: self.obnov_index(sila=True))
         subor.add_command(label="Nasadiť aplikáciu…", command=self.otvor_nasadenie)
+        subor.add_command(label="Prehľad počítačov…", command=self.otvor_pocitace)
         subor.add_separator()
         subor.add_command(label="Ukončiť", command=self.ukonci)
         self._subor_menus.append(subor)
@@ -449,6 +451,7 @@ class HlavneOkno(TkinterDnD.Tk):
         self._rezim.configure(text="Režim: " + ("Plný" if self.nast.rezim == "plny" else "Na prezeranie"))
         for menu in getattr(self, "_subor_menus", []):     # publikovanie je len v plnom režime
             menu.entryconfigure("Nasadiť aplikáciu…", state="normal" if self.nast.rezim == "plny" else "disabled")
+            menu.entryconfigure("Prehľad počítačov…", state="normal" if self.nast.rezim == "plny" else "disabled")
 
     def _aktualizuj_zdroj_text(self):
         if self._katalog_zdroj == "cache":
@@ -558,6 +561,8 @@ class HlavneOkno(TkinterDnD.Tk):
 
     def _pouzi_katalog(self, kat: aktualizacie.Katalog, sila: bool = False):
         self._katalog_zdroj = kat.zdroj
+        if kat.zdroj != "ziadny":
+            self._kat_launcher = kat.launcher
         self._aktualizuj_zdroj_text()
         self._ukaz_chyby(kat.chyby)
         if kat.zdroj == "ziadny":
@@ -624,6 +629,8 @@ class HlavneOkno(TkinterDnD.Tk):
             self._launcher_akt = launcher
         self._prekresli_aktualizacie()
         self.obnov_stavy()                         # mohla pribudnúť / ubudnúť aplikácia
+        if kat.zdroj == "siet":
+            self._zapis_pocitac()
         self._po_prvom_katalogu()
 
     def _casovac_katalogu(self):
@@ -1266,6 +1273,29 @@ class HlavneOkno(TkinterDnD.Tk):
             self._upozorni("L:\\ nie je dostupný – nasadenie sa teraz nedá spraviť.")
             return
         OknoNasadenia(self, Path(self.nast.koren_nastrojov), self._pozadie, self.obnov_katalog)
+
+    def _zapis_pocitac(self):
+        """Na pozadí zapíše záznam tohto počítača (verzie, čo beží) na L: – aj v režime Na prezeranie. Chyby len do logu."""
+        apps, koren = list(self._katalog_apps), Path(self.nast.koren_nastrojov)
+        rezim = self.nast.rezim
+
+        def praca(posli):
+            try:
+                pocitace.zapis(koren, pocitace.zostav(apps, LOCAL_DIR, VERZIA, rezim))
+            except Exception:
+                log.warning("Záznam počítača sa nepodarilo zapísať", exc_info=True)
+
+        self._pozadie.spusti("pocitac_zapis", praca)
+
+    def otvor_pocitace(self):
+        """Súbor → Prehľad počítačov… (len plný režim): verzie aplikácií u kolegov, kto má otvorenú starú."""
+        if self.nast.rezim != "plny":
+            return
+        if not self._disky_ok.get("L"):
+            self._upozorni("L:\\ nie je dostupný – prehľad počítačov sa teraz nedá načítať.")
+            return
+        PocitaceOkno(self, Path(self.nast.koren_nastrojov), self._pozadie, lambda: (
+            self._katalog_apps, ((getattr(self, "_kat_launcher", None) or {}).get("verzia") or "")))
 
     def otvor_nastavenia(self):
         OknoNastaveni(self, self.nast, self._pri_ulozeni_nastaveni, filtruj_rezim(self._katalog_apps, self.nast.rezim))

@@ -1,5 +1,12 @@
 # Čo je nové
 
+## 2026.11.26-2
+- **Súbor → Prehľad počítačov…** (len plný režim): tabuľka počítač × aplikácia s verziami a farbami – zelená aktuálna,
+  **oranžová beží stará verzia (treba aplikáciu zavrieť a otvoriť)**, modrá čaká novšia z L:, sivá nie je nainštalovaná,
+  červená počítač sa neozval 2 dni. Údaje sú malé súbory `L:\_Nastroje\_stav\_pocitace\<POCITAC>.json`, ktoré každý launcher
+  (aj v režime Na prezeranie) zapíše pri štarte a raz za 10 minút (verzie nainštalované lokálne a verzie bežiacich aplikácií).
+  Zápis ide na pozadí a chyba sa len zaloguje.
+
 ## 2026.11.26-1
 - **Spúšťanie aplikácií z poľa zákazky** (hlavné okno, zobrazenie B, okno z tray aj rýchle okno Ctrl+Alt+Q):
   napíš názov alebo skratku aplikácie (napr. „edi“, „nastr“, „e“) a Enter ju spustí. Návrhy aplikácií sú nad zákazkami,

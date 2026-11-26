@@ -40,7 +40,9 @@ do `docs/zmeny_v_aplikaciach.md` – urobí sa v repozitári danej aplikácie.
   `ON` = stará) a **nie sú** totožné s novými `OD00000626`.
 - `R:\` – zrkadlo L: len s programami na nahratie do strojov.
 - `L:\_Nastroje\` – koreň launchera (nastaviteľný). **L: a R: launcher len číta**,
-  zapisuje iba do `L:\_Nastroje\` (a to len publikačný skript, nie bežný beh).
+  zapisuje iba do `L:\_Nastroje\` (publikačný skript; od 2026.11.26-2 aj bežný launcher, ale **výhradne** malý záznam
+  o počítači `L:\_Nastroje\_stav\_pocitace\<POCITAC>.json` pre Súbor → Prehľad počítačov, aj v režime Na prezeranie
+  – rozhodnutie používateľa 2026.11.26; `pocitace.py`).
 - Lokálne: `%LOCALAPPDATA%\NC_Nastroje\` (kópie aplikácií, cache, logy),
   `%APPDATA%\NC_Nastroje\nastavenia.json` (nastavenia používateľa).
 
