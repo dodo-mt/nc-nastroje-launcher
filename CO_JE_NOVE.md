@@ -1,5 +1,17 @@
 # Čo je nové
 
+## 2026.11.27-1
+- **Súbor → Stroje…** (len plný režim): editor zdieľaného zoznamu strojov `L:\_Nastroje\Nastavenia\stroje.json`, ktorý čítajú Lupa,
+  Triedič NC (a neskôr TNC Sync a NC Editor). Vľavo strom **skupina → model → kus** (vyradené skupiny sú zbalené v časti „vyradené“),
+  vpravo formulár: skupina = kinematika + riadenie + priečinok Triediča, model = post a texty `STROJ:` v hlavičke (hyperMILL aj Edgecam,
+  jednoduchý zápis – obyčajný text, regulárny výraz s predponou `re:`), kus = fyzický stroj. Premenovanie mení len názov (pevné `id`),
+  poradie modelov = priorita rozpoznania. Dole **Otestovať hlavičku** (text alebo NC program: čo rozpozná Lupa a Triedič).
+  Uloženie je atómové so zálohou `stroje.json.bak`, zmeny sa kontrolujú (chybný regulárny výraz, duplicitný priečinok…) a súbor, ktorý
+  medzitým zmenil iný počítač alebo „Naučiť sa“ v Triediči, sa neprepíše. Ak súbor na L: ešte nie je, ponúkne sa „Vytvoriť stroje.json
+  zo vstavaných hodnôt“. Zmeny sa v Lupe a Triediči prejavia po reštarte alebo „Znovu načítať nastavenia“.
+  (Ak by strom + formulár nevyhovoval, dá sa prepnúť na záložky Skupiny / Modely / Kusy.)
+- Launcher teraz **zapisuje** aj `L:\_Nastroje\Nastavenia\stroje.json` (výhradne z tohto okna, rozhodnutie používateľa 2026.11.27).
+
 ## 2026.11.26-3
 - Interná zmena bez zmeny správania: normalizácia čísla zákazky (`21930`, `OD21930`, `OD626\001252`) je v spoločnom balíku `nc_parsery` (priečinok `NC parsery` vedľa projektu; exe ho obsahuje).
 - **Oprava „Otvoriť R:“**: priečinok zákazníka je na R: len číslo (`R:\101270\OD00021930`), nie celý názov z L: (`101270-Meno firmy`), preto launcher zákazky z R: nenašiel a hlásil „na R: nie je“. Staré značenie (`OD626\001252`) ostáva rovnaké ako na L:.

@@ -26,6 +26,7 @@ from .dlazdica import Dlazdica
 from .nasadenie_okno import OknoNasadenia
 from .nastavenia import OknoNastaveni
 from .pocitace_okno import PocitaceOkno
+from .stroje_okno import StrojeOkno
 from . import tema
 from .pole_zakazky import PoleZakazky
 from .prve_spustenie import PrveSpustenie, Volby, volby_na_nastavenia
@@ -171,6 +172,7 @@ class HlavneOkno(TkinterDnD.Tk):
         subor.add_command(label="Obnoviť index zákaziek", command=lambda: self.obnov_index(sila=True))
         subor.add_command(label="Nasadiť aplikáciu…", command=self.otvor_nasadenie)
         subor.add_command(label="Prehľad počítačov…", command=self.otvor_pocitace)
+        subor.add_command(label="Stroje…", command=self.otvor_stroje)
         subor.add_separator()
         subor.add_command(label="Ukončiť", command=self.ukonci)
         self._subor_menus.append(subor)
@@ -453,6 +455,7 @@ class HlavneOkno(TkinterDnD.Tk):
         for menu in getattr(self, "_subor_menus", []):     # publikovanie je len v plnom režime
             menu.entryconfigure("Nasadiť aplikáciu…", state="normal" if self.nast.rezim == "plny" else "disabled")
             menu.entryconfigure("Prehľad počítačov…", state="normal" if self.nast.rezim == "plny" else "disabled")
+            menu.entryconfigure("Stroje…", state="normal" if self.nast.rezim == "plny" else "disabled")
 
     def _aktualizuj_zdroj_text(self):
         if self._katalog_zdroj == "cache":
@@ -1297,6 +1300,15 @@ class HlavneOkno(TkinterDnD.Tk):
             return
         PocitaceOkno(self, Path(self.nast.koren_nastrojov), self._pozadie, lambda: (
             self._katalog_apps, ((getattr(self, "_kat_launcher", None) or {}).get("verzia") or "")))
+
+    def otvor_stroje(self):
+        """Súbor → Stroje… (len plný režim): editor zdieľaného zoznamu strojov L:\\_Nastroje\\Nastavenia\\stroje.json."""
+        if self.nast.rezim != "plny":
+            return
+        if not self._disky_ok.get("L"):
+            self._upozorni("L:\\ nie je dostupný – stroje sa teraz nedajú upravovať.")
+            return
+        StrojeOkno(self, Path(self.nast.koren_nastrojov), self._pozadie)
 
     def otvor_nastavenia(self):
         OknoNastaveni(self, self.nast, self._pri_ulozeni_nastaveni, filtruj_rezim(self._katalog_apps, self.nast.rezim))

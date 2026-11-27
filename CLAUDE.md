@@ -36,7 +36,9 @@ ju ako samostatný návrh do `docs/zmeny_v_aplikaciach.md` – urobí sa v repoz
 - `L:\_Nastroje\` – koreň launchera (nastaviteľný). **L: a R: launcher len číta**, zapisuje iba do `L:\_Nastroje\`
   (publikačný skript; od 2026.11.26-2 aj bežný launcher, ale **výhradne** malý záznam o počítači
   `L:\_Nastroje\_stav\_pocitace\<POCITAC>.json` pre Súbor → Prehľad počítačov, aj v režime Na prezeranie – rozhodnutie
-  používateľa 2026.11.26; `pocitace.py`).
+  používateľa 2026.11.26; `pocitace.py`) a od 2026.11.27-1 aj zdieľaný zoznam strojov `L:\_Nastroje\Nastavenia\stroje.json`
+  (**výhradne** z okna Súbor → Stroje…, len plný režim, atómovo so zálohou `.bak`; `stroje_editor.py`, `ui/stroje_okno.py`,
+  formát a čítanie v balíku `nc_parsery.stroje`, plán `NC parsery\docs\plan_krok5.md`).
 - Lokálne: `%LOCALAPPDATA%\NC_Nastroje\` (kópie aplikácií, cache, logy), `%APPDATA%\NC_Nastroje\nastavenia.json`.
 - Pri vývoji a testoch **vždy falošný koreň** (`test_data\L\`, `test_data\R\`) nastaviteľný v nastaveniach – nikdy nesiahaj na skutočné L:/R:.
 
