@@ -201,6 +201,47 @@ class Editor:
         m["pripony"] = [(p if p.startswith(".") else "." + p).lower()
                         for p in re.split(r"[,;\s]+", pripony_text.strip()) if p]
 
+    def _id_modelu(self, nazov: str, okrem: str = "") -> str | None:
+        """Model podľa názvu, skratky alebo id (bez ohľadu na veľkosť písmen)."""
+        n = " ".join(nazov.split()).casefold()
+        for m in self.modely:
+            if m["id"] != okrem and n in (" ".join(m["nazov"].split()).casefold(),
+                                         " ".join(m.get("skratka", "").split()).casefold(), m["id"].casefold()):
+                return m["id"]
+        return None
+
+    def nazvy_modelov(self, ids: list[str]) -> str:
+        """id modelov -> názvy oddelené čiarkou (do poľa formulára)."""
+        return ", ".join(self.model(i)["nazov"] for i in ids if self.model(i))
+
+    def nastav_pravidla_lupy(self, id_: str, mena_listov: str, znaky_obsahu: str, pripona_urcuje: str,
+                             rovnaky_program: str, vseobecny_pre: str) -> list[str]:
+        """Pokročilé polia modelu (pravidlá Lupy). Mená listov a znaky v obsahu: jeden na riadok (jednoduchý zápis / `re:`),
+        prípony oddelené čiarkou, `rovnaky_program` a `vseobecny_pre` = názvy (skratky) iných modelov oddelené čiarkou.
+        Vráti názvy, ktoré sa nenašli (tie sa neuložia)."""
+        m = self.model(id_)
+        nezname: list[str] = []
+        hodnoty = {
+            "mena_listov": riadky_na_regexy(mena_listov),
+            "znaky_obsahu": riadky_na_regexy(znaky_obsahu),
+            "pripona_urcuje": [(p if p.startswith(".") else "." + p).lower() for p in re.split(r"[,;\s]+", pripona_urcuje.strip()) if p],
+        }
+        for kluc, text in (("rovnaky_program", rovnaky_program), ("vseobecny_pre", vseobecny_pre)):
+            ids = []
+            for n in (x.strip() for x in text.split(",") if x.strip()):
+                mid = self._id_modelu(n, okrem=id_)
+                if mid:
+                    ids.append(mid)
+                else:
+                    nezname.append(n)
+            hodnoty[kluc] = ids
+        for kluc, hodnota in hodnoty.items():
+            if hodnota:
+                m[kluc] = hodnota
+            else:
+                m.pop(kluc, None)
+        return nezname
+
     # ----- kontrola -----
     def chyby(self) -> list[str]:
         """Všetko, čo by pri čítaní súboru zahodilo záznam alebo je podozrivé (neznáme riadenie sa len ponecháva, ale hlási)."""

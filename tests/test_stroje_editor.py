@@ -172,3 +172,34 @@ def test_otestuj_subor(tmp_path):
     p = tmp_path / "x.h"
     p.write_bytes("0 BEGIN PGM X MM\n7 ;  (STROJ: DMG DMC 160)\n".encode("cp1250"))
     assert se.otestuj_subor(stroje.predvolene(), p)["skupina"].id == "dmc160"
+
+
+# ---- pravidlá Lupy (pokročilé polia modelu)
+
+def test_pravidla_lupy_z_formulara():
+    e = editor()
+    nezname = e.nastav_pravidla_lupy("gmx", "gmx\nGMX 400\nre:(?<![a-z])gmx", "", "", "Gamma, Neexistuje", "")
+    m = e.model("gmx")
+    assert nezname == ["Neexistuje"] and m["rovnaky_program"] == ["gamma"]
+    assert m["mena_listov"] == ["gmx", r"GMX\s*400", "(?<![a-z])gmx"] and "znaky_obsahu" not in m
+    assert e.nazvy_modelov(m["rovnaky_program"]) == "Gamma"
+    # Mazak: všeobecný pre presnejšie modely (názov, skratka aj id); seba samého nie
+    assert e.nastav_pravidla_lupy("mazak", "mazak", "", "eia, .EIA", "", "Mazak J-200S, IG400, mazak") == ["mazak"]
+    assert e.model("mazak")["vseobecny_pre"] == ["j200", "ig400"] and e.model("mazak")["pripona_urcuje"] == [".eia", ".eia"]
+    assert e.chyby() == [] and e.zoznam().vseobecny() == {"Mazak": ["J200", "IG400"]}
+    e.nastav_pravidla_lupy("wfl", "", "", "", "", "")           # prázdne polia odstránia pravidlá
+    assert not any(k in e.model("wfl") for k in ("mena_listov", "znaky_obsahu", "pripona_urcuje"))
+    assert e.zoznam().znaky_obsahu() == []
+
+
+def test_predvolene_pravidla_prezijú_formular_bez_zmeny():
+    """Otvorenie a zápis polí modelu bez úpravy nesmie zmeniť pravidlá (tam a späť jednoduchý zápis / re:)."""
+    e = editor()
+    pred = e.zoznam()
+    for m in list(e.modely):
+        e.nastav_pravidla_lupy(m["id"], se.regexy_na_riadky(m.get("mena_listov", [])), se.regexy_na_riadky(m.get("znaky_obsahu", [])),
+                               ", ".join(m.get("pripona_urcuje", [])), e.nazvy_modelov(m.get("rovnaky_program", [])),
+                               e.nazvy_modelov(m.get("vseobecny_pre", [])))
+    po = e.zoznam()
+    assert (po.pravidla_listov(), po.znaky_obsahu(), po.pripona_stroj(), po.rovnaky_program(), po.vseobecny()) == (
+        pred.pravidla_listov(), pred.znaky_obsahu(), pred.pripona_stroj(), pred.rovnaky_program(), pred.vseobecny())

@@ -1,5 +1,8 @@
 # Čo je nové
 
+## 2026.11.27-2
+- **Súbor → Stroje…: pokročilé pravidlá Lupy** v modeli (zaškrtávacie pole „Pokročilé“): mená CNC listov, znaky v obsahu programu, prípony, ktoré samy určujú stroj, „rovnaký program ako“ (GMX → Gamma) a „všeobecný pre“ (Mazak → J200, IG400). Zapisujú sa do stroje.json a číta ich Lupa. Test hlavičky je teraz pod stromom a okno je vyššie.
+
 ## 2026.11.27-1
 - **Súbor → Stroje…** (len plný režim): editor zdieľaného zoznamu strojov `L:\_Nastroje\Nastavenia\stroje.json`, ktorý čítajú Lupa,
   Triedič NC (a neskôr TNC Sync a NC Editor). Vľavo strom **skupina → model → kus** (vyradené skupiny sú zbalené v časti „vyradené“),

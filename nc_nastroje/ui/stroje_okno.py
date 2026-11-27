@@ -35,7 +35,7 @@ class StrojeOkno(tk.Toplevel):
         self.title("Stroje")
         self.configure(bg=PALETA["pozadie"])
         self.transient(rodic)
-        self.minsize(900, 580)
+        self.minsize(900, 640)
         self._rodic, self._cesta, self._pozadie, self._pri_ulozeni = rodic, stroje.cesta_suboru(koren), pozadie, pri_ulozeni
         self._ed: stroje_editor.Editor | None = None
         self._podpis = None
@@ -67,8 +67,8 @@ class StrojeOkno(tk.Toplevel):
         self._obsah.pack(fill="both", expand=True)
         self.protocol("WM_DELETE_WINDOW", self._zavri)
         self.bind("<Escape>", lambda e: self._zavri())
-        self.geometry("1020x680")
-        centruj(self, rodic, (1020, 680))
+        self.geometry("1020x790")
+        centruj(self, rodic, (1020, 790))
         self._nacitaj()
 
     # ------------------------------------------------------------------ načítanie a stavy okna
@@ -178,6 +178,7 @@ class StrojeOkno(tk.Toplevel):
             b = ttk.Button(tb, text=text, command=cmd)
             b.pack(side="left", padx=(0, 6))
             Tooltip(b, tip)
+        self._postav_test(lavy)                 # test hlavičky pod stromom (pravý panel je pri pokročilých poliach vysoký)
         sv = ttk.Frame(lavy)
         sv.pack(fill="both", expand=True)
         self._strom = ttk.Treeview(sv, show="tree", selectmode="browse")
@@ -197,7 +198,6 @@ class StrojeOkno(tk.Toplevel):
         self._postav_skupinu()
         self._postav_model()
         self._postav_kus()
-        self._postav_test(pravy)
         self._postav_strom()
         self._aktualizuj_stav()
 
@@ -245,34 +245,65 @@ class StrojeOkno(tk.Toplevel):
     def _postav_model(self):
         f = self._f_model = ttk.Frame(self._formy)
         f.columnconfigure(1, weight=1)
-        self._vm = self._var(["nazov", "skratka", "skupina", "pripony"])
+        self._vm = self._var(["nazov", "skratka", "skupina", "pripony", "pripona_urcuje", "rovnaky", "vseobecny"])
         self._riadok(f, 0, "Názov:", ttk.Entry(f, textvariable=self._vm["nazov"]), "Názov modelu / postprocesora")
         self._riadok(f, 1, "Skratka (Lupa):", ttk.Entry(f, textvariable=self._vm["skratka"], width=22),
                      "Krátky názov stroja v Lupe (napr. eVo 80)")
         self._cb_skupina = ttk.Combobox(f, textvariable=self._vm["skupina"], state="readonly")
         self._cb_skupina.bind("<<ComboboxSelected>>", lambda e: self._zapis())
         self._riadok(f, 2, "Skupina:", self._cb_skupina, "Skupina, do ktorej model patrí (určuje priečinok Triediča)")
-        self._t_hlavicka = self._text(f, 4)
+        self._t_hlavicka = self._text(f, 3)
         self._riadok(f, 3, "Texty v hlavičke:", self._t_hlavicka,
                      "Čo stojí za STROJ: v hlavičke programu (hyperMILL aj Edgecam), jeden text na riadok.\n"
                      "Medzera = ľubovoľne veľa medzier, veľkosť písmen nehrá rolu. Pokročilý regulárny výraz: re:…")
         ttk.Label(f, text="jeden na riadok; regulárny výraz s predponou re:", foreground=PALETA["text2"]).grid(
             row=4, column=1, sticky="w")
-        self._t_triedic = self._text(f, 3)
+        self._t_triedic = self._text(f, 2)
         self._riadok(f, 5, "Texty pre Triedič:", self._t_triedic,
                      "Presné riadky (STROJ: …) so zátvorkami, ktoré Triedič NC triedi (len hyperMILL a DMC 105).\n"
                      "Jeden na riadok; prázdne = Triedič tento model netriedi.")
         self._riadok(f, 6, "Prípony:", ttk.Entry(f, textvariable=self._vm["pripony"], width=22),
                      "Prípony programov oddelené čiarkou (.h, .mpf)")
+        self._pokr = tk.BooleanVar(value=False)
+        pk = ttk.Checkbutton(f, text="Pokročilé: pravidlá Lupy (mená listov, znaky v obsahu…)", variable=self._pokr,
+                             command=self._prepni_pokrocile)
+        pk.grid(row=7, column=1, sticky="w", pady=(6, 0))
+        Tooltip(pk, "Ako Lupa pozná stroj zákazky mimo riadku STROJ: v hlavičke programu")
+        self._pokr_frame = ttk.Frame(f)
+        self._pokr_frame.columnconfigure(1, weight=1)
+        pf = self._pokr_frame
+        self._t_listy = self._text(pf, 2)
+        self._riadok(pf, 0, "Mená listov:", self._t_listy,
+                     "Vzor v mene CNC listu (OD…_op20_GMX.xls, …_MAZAK-IG400.pdf), jeden na riadok; jednoduchý zápis alebo re:…")
+        self._t_znaky = self._text(pf, 2)
+        self._riadok(pf, 1, "Znaky v obsahu:", self._t_znaky,
+                     "Vzor v začiatku programu bez riadku STROJ: (napr. WFL: re:_N_WKS_DIR|TLCH1\\s*\\()")
+        self._riadok(pf, 2, "Prípona určuje stroj:", ttk.Entry(pf, textvariable=self._vm["pripona_urcuje"], width=22),
+                     "Prípony, ktoré samy určujú stroj (.eia = Mazak, .wpd = WFL), oddelené čiarkou")
+        self._riadok(pf, 3, "Rovnaký program ako:", ttk.Entry(pf, textvariable=self._vm["rovnaky"]),
+                     "Názvy iných modelov s rovnakým programom (GMX → Gamma): hlavička hovorí tento model, listy len jeden z nich -> "
+                     "ukáže sa ten. Oddelené čiarkou.")
+        self._riadok(pf, 4, "Všeobecný pre:", ttk.Entry(pf, textvariable=self._vm["vseobecny"]),
+                     "Názvy presnejších modelov (Mazak → J200, IG400): tento všeobecný model sa v zákazke vynechá, keď je tam niektorý z nich")
+        self._l_nezname = ttk.Label(pf, text="", foreground=STAVY["upozornenie"][0])
+        self._l_nezname.grid(row=5, column=1, sticky="w")
+        self._pokr_frame.grid(row=8, column=0, columnspan=2, sticky="we")
+        self._pokr_frame.grid_remove()
         r = ttk.Frame(f)
-        r.grid(row=7, column=1, sticky="w", pady=(8, 0))
+        r.grid(row=9, column=1, sticky="w", pady=(8, 0))
         for text, smer, tip in (("▲ Vyššia priorita", -1, "Model sa skúša skôr (prvá zhoda vyhráva)"),
                                 ("▼ Nižšia priorita", 1, "Model sa skúša neskôr")):
             b = ttk.Button(r, text=text, command=lambda s=smer: self._posun(s))
             b.pack(side="left", padx=(0, 8))
             Tooltip(b, tip)
         self._i_model = ttk.Label(f, foreground=PALETA["text2"], justify="left", wraplength=520)
-        self._i_model.grid(row=8, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        self._i_model.grid(row=10, column=0, columnspan=2, sticky="w", pady=(10, 0))
+
+    def _prepni_pokrocile(self):
+        if self._pokr.get():
+            self._pokr_frame.grid()
+        else:
+            self._pokr_frame.grid_remove()
 
     # ----- kus -----
     def _postav_kus(self):
@@ -302,7 +333,7 @@ class StrojeOkno(tk.Toplevel):
         b2 = ttk.Button(lf, text="Súbor…", command=self._otestuj_subor)
         b2.grid(row=0, column=2, padx=(6, 0))
         Tooltip(b2, "Prečíta hlavičku NC programu a ukáže, ako by ju rozpoznali Lupa a Triedič")
-        self._v_vysl = ttk.Label(lf, text="", justify="left", wraplength=560)
+        self._v_vysl = ttk.Label(lf, text="", justify="left", wraplength=380)
         self._v_vysl.grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
 
     def _vyhodnot(self, r: dict):
@@ -428,6 +459,16 @@ class StrojeOkno(tk.Toplevel):
                 self._t_hlavicka.insert("1.0", stroje_editor.regexy_na_riadky(m.get("hlavicka", [])))
                 self._t_triedic.delete("1.0", "end")
                 self._t_triedic.insert("1.0", "\n".join((m.get("triedic") or {}).get("match", [])))
+                self._vm["pripona_urcuje"].set(", ".join(m.get("pripona_urcuje", [])))
+                self._vm["rovnaky"].set(ed.nazvy_modelov(m.get("rovnaky_program", [])))
+                self._vm["vseobecny"].set(ed.nazvy_modelov(m.get("vseobecny_pre", [])))
+                for pole, kluc in ((self._t_listy, "mena_listov"), (self._t_znaky, "znaky_obsahu")):
+                    pole.delete("1.0", "end")
+                    pole.insert("1.0", stroje_editor.regexy_na_riadky(m.get(kluc, [])))
+                self._l_nezname.configure(text="")
+                if any(m.get(k) for k in ("mena_listov", "znaky_obsahu", "pripona_urcuje", "rovnaky_program", "vseobecny_pre")):
+                    self._pokr.set(True)
+                self._prepni_pokrocile()
                 poradie = [x["id"] for x in ed.modely].index(id_) + 1
                 self._i_model.configure(text=f"Poradie (priorita rozpoznania): {poradie} z {len(ed.modely)}\n"
                                              f"Kusy: {', '.join(k['nazov'] for k in ed.kusy_modelu(id_)) or '–'}\nid: {id_}")
@@ -471,6 +512,9 @@ class StrojeOkno(tk.Toplevel):
             m["nazov"], m["skratka"] = v["nazov"].get(), v["skratka"].get()
             ed.nastav_texty_modelu(id_, self._t_hlavicka.get("1.0", "end"), self._t_triedic.get("1.0", "end"),
                                    v["pripony"].get())
+            nezname = ed.nastav_pravidla_lupy(id_, self._t_listy.get("1.0", "end"), self._t_znaky.get("1.0", "end"),
+                                              v["pripona_urcuje"].get(), v["rovnaky"].get(), v["vseobecny"].get())
+            self._l_nezname.configure(text=("Neznámy model: " + ", ".join(nezname)) if nezname else "")
             self._strom.item(iid, text=m["nazov"])
         elif druh == "k" and ed.kus(id_):
             k, v = ed.kus(id_), self._vk

@@ -148,3 +148,20 @@ def test_ulozenie_a_cudzia_zmena(root, ticho, tmp_path):
     assert stroje.nacitaj(cesta).skupina("evo").kinematika == "moja zmena"        # druhá zmena sa neprepísala
     assert any(t[0] == "askyesno" and "zmenil" in t[1][1] for t in ticho)
     okno.destroy()
+
+
+def test_pokrocile_pravidla_lupy_vo_formulari(root, ticho, tmp_path):
+    stroje_editor.vytvor_z_predvolenych(stroje.cesta_suboru(tmp_path))
+    okno = otvor(root, tmp_path)
+    okno._strom.selection_set("m:mazak")
+    okno.update()
+    assert okno._pokr.get() and okno._vm["vseobecny"].get() == "Mazak J-200S, Mazak Integrex 400-IV"   # pole sa otvorí samo
+    assert okno._vm["pripona_urcuje"].get() == ".eia"
+    okno._vm["rovnaky"].set("neznamy stroj")
+    assert "Neznámy model" in okno._l_nezname.cget("text") and "rovnaky_program" not in okno._ed.model("mazak")
+    okno._vm["rovnaky"].set("Gamma")
+    assert okno._ed.model("mazak")["rovnaky_program"] == ["gamma"] and okno._l_nezname.cget("text") == ""
+    okno._strom.selection_set("m:evo80")                        # model bez pravidiel: pokročilé pole sa nenúti
+    okno.update()
+    assert okno._vm["vseobecny"].get() == "" and okno._ed.zoznam().chyby == []
+    okno.destroy()
